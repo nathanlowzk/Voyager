@@ -9,6 +9,8 @@ import { Destination, DestinationCard } from './components/DestinationCard';
 import { Passport } from './components/Passport';
 import { TripPlanningForm, TripPlan } from './components/TripPlanningForm';
 import { Trips } from './components/Trips';
+import { SignIn } from './sign_in';
+import { Registration } from './registration';
 
 // --- Types & Interfaces ---
 
@@ -27,7 +29,7 @@ function VoyagerApp() {
   const [loading, setLoading] = useState(true);
   const [personalized, setPersonalized] = useState(false);
   const [savedDestinations, setSavedDestinations] = useState<Destination[]>([]);
-  const [currentView, setCurrentView] = useState<'destinations' | 'passport' | 'tripForm' | 'trips'>('destinations');
+  const [currentView, setCurrentView] = useState<'destinations' | 'passport' | 'tripForm' | 'trips' | 'signIn' | 'registration'>('destinations');
   const [trips, setTrips] = useState<TripPlan[]>([]);
 
   useEffect(() => {
@@ -162,9 +164,10 @@ function VoyagerApp() {
         </div>
 
         <div className="flex items-center gap-6">
-          <button className="text-slate-400 hover:text-slate-900 transition-colors">
-            <Lucide.User className="w-6 h-6" />
-          </button>
+          <Button variant="outline" className="flex items-center gap-2" onClick={() => setCurrentView('signIn')}>
+            <Lucide.LogIn className="w-4 h-4" />
+            Sign In
+          </Button>
           <Button variant="primary" className="hidden sm:flex" onClick={() => setCurrentView('tripForm')}>Plan Trip</Button>
         </div>
       </nav>
@@ -244,6 +247,22 @@ function VoyagerApp() {
           />
         ) : currentView === 'tripForm' ? (
           <TripPlanningForm onSubmit={handleTripSubmit} />
+        ) : currentView === 'signIn' ? (
+          <SignIn
+            onSignIn={(email, password) => {
+              console.log('Sign in:', email);
+              setCurrentView('destinations');
+            }}
+            onNavigateToRegister={() => setCurrentView('registration')}
+          />
+        ) : currentView === 'registration' ? (
+          <Registration
+            onRegister={(fullName, email, dateOfBirth) => {
+              console.log('Register:', fullName, email);
+              setCurrentView('destinations');
+            }}
+            onNavigateToSignIn={() => setCurrentView('signIn')}
+          />
         ) : (
           <Trips
             trips={trips}
