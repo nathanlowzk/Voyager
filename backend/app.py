@@ -2,23 +2,23 @@ import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from database import get_next_batch
+from database import get_random_batch
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/api/generate-destinations', methods=['GET'])
-def generate_destinations():
-    # 1. Try to get data from Supabase
-    destinations = get_next_batch(limit=4)
 
-    # 2. If DB is empty, tell frontend to wait
+@app.route('/api/destinations/random', methods=['GET'])
+def random_destinations():
+    # 1. Let database.py do the work
+    destinations = get_random_batch(limit=4)
+
     if not destinations:
-        return jsonify({"message": "No cached destinations. Please run seed.py"}), 503
+        return jsonify({"message": "Database is empty"}), 404
 
-    # 3. Transform snake_case to camelCase for frontend
+    # 2. Transform snake_case (DB) to camelCase (Frontend)
     transformed = []
     for dest in destinations:
         transformed.append({
@@ -28,7 +28,7 @@ def generate_destinations():
             "description": dest.get("description"),
             "tags": dest.get("tags", []),
             "imagePrompt": dest.get("image_prompt", ""),
-            "imageUrl": dest.get("image_url"),
+            "imageUrl": dest.get("image_url"), # Now this is a URL, not Base64!
             "isPersonalized": dest.get("is_personalized", False)
         })
 

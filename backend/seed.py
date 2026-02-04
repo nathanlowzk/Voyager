@@ -119,14 +119,14 @@ def generate_single_destination():
     lighting = random.choice(["soft morning light", "golden hour", "moody overcast", "blue hour"])
     vibe = random.choice(["peaceful", "vibrant", "cinematic", "ethereal"])
 
-    my_prompt = f"A stunning editorial travel photograph of {destination_data['name']}, {destination_data['location']}. {destination_data['imagePrompt']}. Shot on Fujifilm GFX 100S, medium format, 45mm lens, {lighting}, {vibe}, high resolution, sharp focus, professional color grading, Condé Nast Traveler style. The scene is completely devoid of people. Any wildlife present must be in the far distance, no close-ups."
+    my_prompt = f"A stunning editorial travel photograph of {destination_data['name']}, {destination_data['location']}. {destination_data['imagePrompt']}. Shot on Fujifilm GFX 100S, medium format, 45mm lens, {lighting}, {vibe}, high resolution, sharp focus, professional color grading, Condé Nast Traveler style. The scene is COMPLETELY DEVOID of people. Any wildlife present must be in the far distance, no close-ups. Avoid large group of wildlife if any, keep it to few animals max."
 
     try:
         print(f"   🎨 Painting {destination_data['name']}...")
-        time.sleep(3) # Safety pause for Image API
+        time.sleep(15) # Safety pause for Image API
         
         img_response = client.models.generate_images(
-            model='imagen-4.0-fast-generate-001', 
+            model='imagen-4.0-generate-001', 
             prompt=my_prompt,
             config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9")
         )

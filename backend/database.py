@@ -2,6 +2,7 @@ import os
 import json
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 
@@ -41,19 +42,23 @@ def add_destination(dest):
     except Exception as e:
         print(f"❌ Error saving to Supabase: {e}")
         return None
-
-def get_next_batch(limit=4):
+    
+def get_random_batch(limit=4):
     """
-    Fetches the next 'limit' unviewed destinations from Supabase.
+    Fetches all destinations and returns 4 random ones.
     """
     try:
-        response = supabase.table("destinations") \
-            .select("*") \
-            .eq("viewed", False) \
-            .limit(limit) \
-            .execute()
+        # 1. Fetch data (assuming 'supabase' variable exists in this file)
+        response = supabase.table('destinations').select('*').execute()
+        all_data = response.data
         
-        return response.data
+        # 2. Pick random items
+        if not all_data:
+            return []
+            
+        count = min(limit, len(all_data))
+        return random.sample(all_data, count)
+
     except Exception as e:
-        print(f"❌ Error fetching from Supabase: {e}")
+        print(f"Error fetching random batch: {e}")
         return []
