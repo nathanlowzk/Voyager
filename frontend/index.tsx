@@ -30,6 +30,10 @@ function VoyagerApp() {
   const [currentView, setCurrentView] = useState<'destinations' | 'passport' | 'tripForm' | 'trips'>('destinations');
   const [trips, setTrips] = useState<TripPlan[]>([]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentView]);
+
   // Load saved destinations from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('savedDestinations');

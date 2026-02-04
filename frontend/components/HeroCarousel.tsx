@@ -19,7 +19,7 @@ export function HeroCarousel({ destinations, loading, savedDestinations, onToggl
       const timer = setInterval(() => setCurrent(c => (c + 1) % destinations.length), 8000);
       return () => clearInterval(timer);
     }
-  }, [destinations.length]);
+  }, [destinations.length, current]);
 
   if (loading) return (
     <div className="h-[70vh] w-full bg-slate-50 flex flex-col items-center justify-center animate-pulse">
