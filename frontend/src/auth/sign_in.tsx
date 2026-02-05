@@ -1,18 +1,35 @@
 import React, { useState } from 'react';
-import { Button } from './components/Button';
+import { Button } from '../components/Button';
+import { supabase } from '../lib/supabase';
 
 interface SignInProps {
-  onSignIn: (email: string, password: string) => void;
+  onSignIn: () => void;
   onNavigateToRegister: () => void;
 }
 
 export function SignIn({ onSignIn, onNavigateToRegister }: SignInProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSignIn(email, password);
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      onSignIn();
+    }
   };
 
   return (
@@ -22,6 +39,12 @@ export function SignIn({ onSignIn, onNavigateToRegister }: SignInProps) {
         <p className="text-slate-500 text-center mb-10 font-light">Sign in to your Voyager account</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-sm">
+              {error}
+            </div>
+          )}
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
               Email Address
@@ -53,7 +76,7 @@ export function SignIn({ onSignIn, onNavigateToRegister }: SignInProps) {
           </div>
 
           <Button variant="primary" className="w-full justify-center py-3 text-base">
-            Sign In
+            {loading ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
 

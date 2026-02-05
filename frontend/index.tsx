@@ -2,15 +2,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as Lucide from 'lucide-react';
-import { Button } from './components/Button';
-import { Toggle } from './components/Toggle';
-import { HeroCarousel } from './components/HeroCarousel';
-import { Destination, DestinationCard } from './components/DestinationCard';
-import { Passport } from './components/Passport';
-import { TripPlanningForm, TripPlan } from './components/TripPlanningForm';
-import { Trips } from './components/Trips';
-import { SignIn } from './sign_in';
-import { Registration } from './registration';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from './src/lib/supabase';
+import { Button } from './src/components/Button';
+import { Toggle } from './src/components/Toggle';
+import { HeroCarousel } from './src/components/HeroCarousel';
+import { Destination, DestinationCard } from './src/components/DestinationCard';
+import { Passport } from './src/components/Passport';
+import { TripPlanningForm, TripPlan } from './src/components/TripPlanningForm';
+import { Trips } from './src/components/Trips';
+import { SignIn } from './src/auth/sign_in';
+import { Registration } from './src/auth/registration';
 
 // --- Types & Interfaces ---
 
@@ -31,6 +33,45 @@ function VoyagerApp() {
   const [savedDestinations, setSavedDestinations] = useState<Destination[]>([]);
   const [currentView, setCurrentView] = useState<'destinations' | 'passport' | 'tripForm' | 'trips' | 'signIn' | 'registration'>('destinations');
   const [trips, setTrips] = useState<TripPlan[]>([]);
+
+  // Track the currently logged-in user (null means not logged in)
+  const [user, setUser] = useState<User | null>(null);
+
+  // Listen for authentication state changes (login, logout, session refresh)
+  useEffect(() => {
+    // First, check if there's an existing session when the app loads
+    // This handles the case where the user refreshes the page while logged in
+    supabase.auth.getSession().then((response) => {
+      const session = response.data.session;
+      if (session) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    // Subscribe to auth state changes (login, logout, token refresh, etc.)
+    // This keeps the user state in sync with Supabase's auth state
+    const authListener = supabase.auth.onAuthStateChange((event, session) => {
+      // event can be: 'SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED', etc.
+      if (session) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    // Cleanup: unsubscribe when component unmounts
+    return () => {
+      authListener.data.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Handle user sign out
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setCurrentView('destinations');
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -164,10 +205,24 @@ function VoyagerApp() {
         </div>
 
         <div className="flex items-center gap-6">
-          <Button variant="outline" className="flex items-center gap-2" onClick={() => setCurrentView('signIn')}>
-            <Lucide.LogIn className="w-4 h-4" />
-            Sign In
-          </Button>
+          {user ? (
+            // User is logged in - show their name and sign out button
+            <>
+              <span className="text-sm text-slate-600 hidden sm:block">
+                Hi, {user.user_metadata?.full_name || user.email}
+              </span>
+              <Button variant="outline" className="flex items-center gap-2" onClick={handleSignOut}>
+                <Lucide.LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            // User is not logged in - show sign in button
+            <Button variant="outline" className="flex items-center gap-2" onClick={() => setCurrentView('signIn')}>
+              <Lucide.LogIn className="w-4 h-4" />
+              Sign In
+            </Button>
+          )}
           <Button variant="primary" className="hidden sm:flex" onClick={() => setCurrentView('tripForm')}>Plan Trip</Button>
         </div>
       </nav>
@@ -249,16 +304,19 @@ function VoyagerApp() {
           <TripPlanningForm onSubmit={handleTripSubmit} />
         ) : currentView === 'signIn' ? (
           <SignIn
-            onSignIn={(email, password) => {
-              console.log('Sign in:', email);
+            onSignIn={() => {
+              // After successful sign in, navigate back to destinations
+              // The user state will be automatically updated by the auth listener
               setCurrentView('destinations');
             }}
             onNavigateToRegister={() => setCurrentView('registration')}
           />
         ) : currentView === 'registration' ? (
           <Registration
-            onRegister={(fullName, email, dateOfBirth) => {
-              console.log('Register:', fullName, email);
+            onRegister={() => {
+              // After successful registration, navigate back to destinations
+              // Note: If email confirmation is enabled in Supabase,
+              // the user won't be logged in until they confirm their email
               setCurrentView('destinations');
             }}
             onNavigateToSignIn={() => setCurrentView('signIn')}

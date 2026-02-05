@@ -1,19 +1,43 @@
 import React, { useState } from 'react';
-import { Button } from './components/Button';
+import { Button } from '../components/Button';
+import { supabase } from '../lib/supabase';
 
 interface RegistrationProps {
-  onRegister: (fullName: string, email: string, dateOfBirth: string) => void;
+  onRegister: () => void;
   onNavigateToSignIn: () => void;
 }
 
 export function Registration({ onRegister, onNavigateToSignIn }: RegistrationProps) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onRegister(fullName, email, dateOfBirth);
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          date_of_birth: dateOfBirth,
+        },
+      },
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      onRegister();
+    }
   };
 
   return (
@@ -23,6 +47,12 @@ export function Registration({ onRegister, onNavigateToSignIn }: RegistrationPro
         <p className="text-slate-500 text-center mb-10 font-light">Join the Voyager community</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-sm">
+              {error}
+            </div>
+          )}
+
           <div>
             <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-2">
               Full Name
@@ -54,6 +84,22 @@ export function Registration({ onRegister, onNavigateToSignIn }: RegistrationPro
           </div>
 
           <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              required
+              minLength={6}
+              className="w-full px-5 py-3 rounded-xl border-2 border-slate-200 focus:border-slate-900 outline-none transition-all text-base"
+            />
+          </div>
+
+          <div>
             <label htmlFor="dob" className="block text-sm font-medium text-slate-700 mb-2">
               Date of Birth
             </label>
@@ -68,7 +114,7 @@ export function Registration({ onRegister, onNavigateToSignIn }: RegistrationPro
           </div>
 
           <Button variant="primary" className="w-full justify-center py-3 text-base">
-            Register
+            {loading ? 'Creating account...' : 'Register'}
           </Button>
         </form>
 
