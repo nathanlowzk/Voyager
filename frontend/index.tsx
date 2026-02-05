@@ -40,6 +40,9 @@ function VoyagerApp() {
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Modal state for viewing destination details
+  const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
+
   // Show a toast notification that auto-dismisses after 4 seconds
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -49,16 +52,67 @@ function VoyagerApp() {
   };
 
   // Handle newsletter subscription
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!user) {
       // User is not signed in, redirect to sign in page
       setCurrentView('signIn');
       return;
     }
 
-    // User is signed in, show success toast
-    // In a real app, you'd also save this preference to your database
-    showToast("You're subscribed! Check your inbox every week for new destinations.");
+    // Check if user is already subscribed
+    if (user.user_metadata?.subscribed_to_newsletter) {
+      showToast("You're already subscribed to our newsletter!", 'success');
+      return;
+    }
+
+    try {
+      // Update user metadata to mark them as subscribed
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          subscribed_to_newsletter: true,
+          subscribed_at: new Date().toISOString()
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local user state to reflect the change
+      setUser((prevUser) => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          user_metadata: {
+            ...prevUser.user_metadata,
+            subscribed_to_newsletter: true,
+            subscribed_at: new Date().toISOString()
+          }
+        };
+      });
+
+      // Send welcome email via backend
+      try {
+        await fetch('http://127.0.0.1:5001/api/newsletter/welcome', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.user_metadata?.full_name || 'Traveler'
+          })
+        });
+      } catch (emailError) {
+        // Don't fail the subscription if email fails
+        console.error('Failed to send welcome email:', emailError);
+      }
+
+      showToast("You're subscribed! Check your inbox for a welcome email.", 'success');
+    } catch (error) {
+      console.error('Failed to subscribe:', error);
+      showToast("Failed to subscribe. Please try again.", 'error');
+    }
   };
 
   // Listen for authentication state changes (login, logout, session refresh)
@@ -293,6 +347,117 @@ function VoyagerApp() {
         </div>
       )}
 
+      {/* Destination Detail Modal */}
+      {selectedDestination && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+          onClick={() => setSelectedDestination(null)}
+        >
+          {/* Dark backdrop */}
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+
+          {/* Modal content */}
+          <div
+            className="relative z-10 w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-3xl bg-slate-900 animate-modal-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedDestination(null)}
+              className="absolute top-4 right-4 z-20 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all"
+            >
+              <Lucide.X className="w-6 h-6" />
+            </button>
+
+            {/* Save button */}
+            <button
+              onClick={() => {
+                toggleSaveDestination(selectedDestination);
+              }}
+              className={`absolute top-4 right-20 z-20 p-3 rounded-full transition-all ${
+                savedDestinations.some(d => d.id === selectedDestination.id)
+                  ? 'bg-rose-500 text-white'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Lucide.Heart
+                className={`w-6 h-6 ${
+                  savedDestinations.some(d => d.id === selectedDestination.id) ? 'fill-current' : ''
+                }`}
+              />
+            </button>
+
+            <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
+              {/* Image section */}
+              <div className="md:w-3/5 h-64 md:h-auto">
+                <img
+                  src={selectedDestination.imageUrl}
+                  alt={selectedDestination.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Details section */}
+              <div className="md:w-2/5 p-8 md:p-10 overflow-y-auto bg-slate-900 text-white">
+                {/* Location badge */}
+                <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium mb-4">
+                  <Lucide.MapPin className="w-4 h-4" />
+                  {selectedDestination.location}
+                </div>
+
+                {/* Name */}
+                <h2 className="text-3xl md:text-4xl font-serif mb-6 leading-tight">
+                  {selectedDestination.name}
+                </h2>
+
+                {/* Description */}
+                <p className="text-slate-300 text-lg leading-relaxed mb-8 font-light">
+                  {selectedDestination.description}
+                </p>
+
+                {/* Tags */}
+                <div className="mb-8">
+                  <h3 className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3">
+                    Tags
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDestination.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1.5 bg-white/10 text-white text-xs uppercase font-medium tracking-wider rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      toggleSaveDestination(selectedDestination);
+                    }}
+                    className={`flex-1 py-3 px-6 rounded-full font-medium transition-all flex items-center justify-center gap-2 ${
+                      savedDestinations.some(d => d.id === selectedDestination.id)
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-white text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Lucide.Heart
+                      className={`w-5 h-5 ${
+                        savedDestinations.some(d => d.id === selectedDestination.id) ? 'fill-current' : ''
+                      }`}
+                    />
+                    {savedDestinations.some(d => d.id === selectedDestination.id) ? 'Saved' : 'Save to Passport'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 h-20 flex items-center px-6 md:px-12 justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
@@ -313,11 +478,6 @@ function VoyagerApp() {
             className={`text-sm font-medium transition-colors flex items-center gap-1 ${currentView === 'passport' ? 'text-emerald-600' : 'hover:text-emerald-600'}`}
           >
             Passport
-            {savedDestinations.length > 0 && (
-              <span className="bg-rose-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {savedDestinations.length}
-              </span>
-            )}
           </button>
           <button
             onClick={() => setCurrentView('trips')}
@@ -379,11 +539,14 @@ function VoyagerApp() {
                 <div>
                   <div className="flex items-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-4">
                     <Lucide.Sparkles className="w-4 h-4" />
-                    Curated Collections
+                    {personalized ? 'Curated For You' : 'Curated Collections'}
                   </div>
                   <h2 className="text-4xl md:text-5xl font-serif leading-tight max-w-xl">
-                    {personalized ? 'Personalized Escapes' : 'Trending Destinations'}
+                    {personalized ? 'Your Personalized Escapes' : 'Discover Your Next Adventure'}
                   </h2>
+                  <p className="text-slate-500 mt-4 font-light">
+                    Click on any destination to explore more
+                  </p>
                 </div>
 
                 <div className="flex flex-col items-start md:items-end gap-4">
@@ -417,6 +580,7 @@ function VoyagerApp() {
                         dest={dest}
                         isSaved={isSaved}
                         onToggleSave={toggleSaveDestination}
+                        onClick={() => setSelectedDestination(dest)}
                       />
                     );
                   })}
@@ -438,6 +602,7 @@ function VoyagerApp() {
             savedDestinations={savedDestinations}
             onToggleSave={toggleSaveDestination}
             onNavigateToDestinations={() => setCurrentView('explore')}
+            onCardClick={(dest) => setSelectedDestination(dest)}
           />
         ) : currentView === 'tripForm' ? (
           <TripPlanningForm onSubmit={handleTripSubmit} />
@@ -530,6 +695,20 @@ function VoyagerApp() {
         /* Hide scrollbar for Chrome, Safari and Opera */
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
+        }
+
+        @keyframes modal-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-modal-in {
+          animation: modal-in 0.3s ease-out;
         }
       `}</style>
     </div>

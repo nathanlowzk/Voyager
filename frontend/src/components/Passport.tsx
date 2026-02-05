@@ -7,9 +7,10 @@ interface PassportProps {
   savedDestinations: Destination[];
   onToggleSave: (dest: Destination) => void;
   onNavigateToDestinations: () => void;
+  onCardClick?: (dest: Destination) => void;
 }
 
-export function Passport({ savedDestinations, onToggleSave, onNavigateToDestinations }: PassportProps) {
+export function Passport({ savedDestinations, onToggleSave, onNavigateToDestinations, onCardClick }: PassportProps) {
   return (
     <section className="max-w-7xl mx-auto px-6 py-12 md:py-20 min-h-[60vh]">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
@@ -48,6 +49,7 @@ export function Passport({ savedDestinations, onToggleSave, onNavigateToDestinat
               dest={dest}
               isSaved={true}
               onToggleSave={onToggleSave}
+              onClick={() => onCardClick?.(dest)}
             />
           ))}
         </div>

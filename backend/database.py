@@ -3,17 +3,24 @@ import json
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import random
+import requests
 
 load_dotenv()
 
-# Initialize Supabase Client
+# Initialize Supabase Client (anon key for regular operations)
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
+service_role_key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 if not url or not key:
     raise ValueError("❌ Supabase credentials missing. Check your .env file.")
 
 supabase: Client = create_client(url, key)
+
+# Create admin client for user operations (requires service role key)
+supabase_admin: Client = None
+if service_role_key and service_role_key != "your_service_role_key_here":
+    supabase_admin = create_client(url, service_role_key)
 
 def init_db():
     # With Supabase, we don't need to "create" the DB file locally.
@@ -109,4 +116,60 @@ def get_destinations_by_tags(tags: list, limit=4):
 
     except Exception as e:
         print(f"Error fetching destinations by tags: {e}")
+        return []
+
+
+def get_subscribed_users():
+    """
+    Fetches all users who have subscribed to the newsletter.
+    Requires the SUPABASE_SERVICE_ROLE_KEY to be set.
+
+    Returns:
+        List of user dictionaries with email, name, and metadata
+    """
+    if not supabase_admin:
+        print("❌ Service role key not configured. Cannot fetch users.")
+        return []
+
+    try:
+        # Use the Supabase Auth Admin API to list all users
+        # We need to paginate through all users
+        subscribed_users = []
+        page = 1
+        per_page = 100
+
+        while True:
+            # Fetch users page by page
+            response = supabase_admin.auth.admin.list_users(
+                page=page,
+                per_page=per_page
+            )
+
+            users = response
+
+            if not users:
+                break
+
+            # Filter for subscribed users
+            for user in users:
+                user_metadata = user.user_metadata or {}
+                if user_metadata.get('subscribed_to_newsletter'):
+                    subscribed_users.append({
+                        'id': user.id,
+                        'email': user.email,
+                        'name': user_metadata.get('full_name', 'Traveler'),
+                        'subscribed_at': user_metadata.get('subscribed_at')
+                    })
+
+            # If we got fewer users than per_page, we've reached the end
+            if len(users) < per_page:
+                break
+
+            page += 1
+
+        print(f"✅ Found {len(subscribed_users)} subscribed users")
+        return subscribed_users
+
+    except Exception as e:
+        print(f"❌ Error fetching subscribed users: {e}")
         return []
