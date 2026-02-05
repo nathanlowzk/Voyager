@@ -37,6 +37,30 @@ function VoyagerApp() {
   // Track the currently logged-in user (null means not logged in)
   const [user, setUser] = useState<User | null>(null);
 
+  // Toast notification state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Show a toast notification that auto-dismisses after 4 seconds
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
+  // Handle newsletter subscription
+  const handleSubscribe = () => {
+    if (!user) {
+      // User is not signed in, redirect to sign in page
+      setCurrentView('signIn');
+      return;
+    }
+
+    // User is signed in, show success toast
+    // In a real app, you'd also save this preference to your database
+    showToast("You're subscribed! Check your inbox every week for new destinations.");
+  };
+
   // Listen for authentication state changes (login, logout, session refresh)
   useEffect(() => {
     // First, check if there's an existing session when the app loads
@@ -164,6 +188,34 @@ function VoyagerApp() {
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-emerald-100">
+      {/* Toast notification - appears in top right corner */}
+      {toast && (
+        <div className="fixed top-24 right-6 z-50 animate-slide-in">
+          <div
+            className={`
+              flex items-center gap-3 px-6 py-4 rounded-2xl shadow-lg border
+              ${toast.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+              }
+            `}
+          >
+            {toast.type === 'success' ? (
+              <Lucide.CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+            ) : (
+              <Lucide.XCircle className="w-5 h-5 text-rose-500 shrink-0" />
+            )}
+            <p className="text-sm font-medium">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 p-1 hover:bg-black/5 rounded-full transition-colors"
+            >
+              <Lucide.X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 h-20 flex items-center px-6 md:px-12 justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
@@ -331,18 +383,19 @@ function VoyagerApp() {
 
         <section className="bg-slate-50 py-24 px-6 mt-12 overflow-hidden relative">
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            <h2 className="text-4xl md:text-6xl font-serif mb-8 leading-tight">Ready to start your next adventure?</h2>
-            <p className="text-lg text-slate-500 mb-12 font-light max-w-2xl mx-auto">
-              Join 50,000+ travelers who use Voyager to plan their dream escapes with AI-powered personal recommendations.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="px-8 py-4 rounded-full border-2 border-slate-200 focus:border-slate-900 outline-none w-full sm:w-96 text-lg transition-all"
-              />
-              <Button className="py-4 px-10 text-lg">Subscribe</Button>
+            <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-6">
+              <Lucide.Mail className="w-4 h-4" />
+              Weekly Newsletter
             </div>
+            <h2 className="text-4xl md:text-5xl font-serif mb-6 leading-tight">
+              Get personalised destinations delivered to your inbox
+            </h2>
+            <p className="text-lg text-slate-500 mb-10 font-light max-w-2xl mx-auto">
+              Every week, we'll send you handpicked travel spots tailored to your interests. No spam, just wanderlust.
+            </p>
+            <Button onClick={handleSubscribe} className="py-4 mx-auto text-lg">
+              Subscribe
+            </Button>
           </div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-100 rounded-full blur-[120px] opacity-30 -mr-48 -mt-48" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-100 rounded-full blur-[120px] opacity-30 -ml-48 -mb-48" />
@@ -371,6 +424,20 @@ function VoyagerApp() {
         }
         .animate-slow-zoom {
           animation: slow-zoom 20s linear infinite alternate;
+        }
+
+        @keyframes slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
         }
       `}</style>
     </div>
