@@ -152,7 +152,7 @@ def generate_single_destination():
             prompt_text = (
                 f"Generate 1 real, specific travel bucket list destination in {c_region} "
                 f"that features {c_theme}. It must be perfect for {c_style}. "
-                "Do not invent places. Return JSON with fields: name, location, description, tags (exactly 4 short tags), imagePrompt, isPersonalized."
+                "Do not invent places. Return JSON with fields: name, location, description, tags, imagePrompt, isPersonalized."
             )
 
             response = client.models.generate_content(
