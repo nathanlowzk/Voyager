@@ -37,12 +37,14 @@ def add_destination(dest):
         "name": dest['name'],
         "location": dest['location'],
         "description": dest['description'],
-        "tags": dest['tags'], 
+        "tags": dest['tags'],
         "image_url": dest['imageUrl'],
         "is_personalized": dest['isPersonalized'],
+        "country": dest.get('country', ''),
+        "region": dest.get('region', ''),
         "viewed": False
     }
-    
+
     try:
         response = supabase.table("destinations").insert(data).execute()
         return response

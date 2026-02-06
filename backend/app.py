@@ -30,7 +30,9 @@ def random_destinations():
             "tags": dest.get("tags", []),
             "imagePrompt": dest.get("image_prompt", ""),
             "imageUrl": dest.get("image_url"), # Now this is a URL, not Base64!
-            "isPersonalized": dest.get("is_personalized", False)
+            "isPersonalized": dest.get("is_personalized", False),
+            "country": dest.get("country", ""),
+            "region": dest.get("region", "")
         })
 
     return jsonify(transformed)
@@ -76,7 +78,9 @@ def personalized_destinations():
             "tags": dest.get("tags", []),
             "imagePrompt": dest.get("image_prompt", ""),
             "imageUrl": dest.get("image_url"),
-            "isPersonalized": True  # Mark as personalized since it matched user's tags
+            "isPersonalized": True,  # Mark as personalized since it matched user's tags
+            "country": dest.get("country", ""),
+            "region": dest.get("region", "")
         })
 
     return jsonify(transformed)
@@ -86,10 +90,12 @@ def personalized_destinations():
 def send_welcome():
     """
     Send a welcome email to a newly subscribed user.
+    Optionally includes personalized destinations based on user's saved tags.
 
     Request Body:
         email: User's email address
         name: User's name
+        tags: Optional list of tags from user's saved destinations (for personalization)
     """
     data = request.get_json()
 
@@ -98,11 +104,17 @@ def send_welcome():
 
     email = data.get('email')
     name = data.get('name', 'Traveler')
+    tags = data.get('tags', [])
 
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    result = send_welcome_email(email, name)
+    # Get personalized destinations if tags are provided
+    destinations = None
+    if tags and len(tags) > 0:
+        destinations = get_destinations_by_tags(tags, limit=4)
+
+    result = send_welcome_email(email, name, destinations)
 
     if result:
         return jsonify({"message": "Welcome email sent successfully"}), 200

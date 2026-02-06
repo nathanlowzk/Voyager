@@ -8,25 +8,71 @@ load_dotenv()
 resend.api_key = os.environ.get("RESEND_API_KEY")
 
 
-def send_welcome_email(to_email: str, user_name: str):
+def send_welcome_email(to_email: str, user_name: str, destinations: list = None):
     """
     Send a welcome email when a user subscribes to the newsletter.
+    Optionally includes personalized destinations based on user's saved tags.
+
+    Args:
+        to_email: Recipient email address
+        user_name: Recipient's name
+        destinations: Optional list of personalized destination dictionaries
     """
     try:
+        # Build destination cards HTML if destinations are provided
+        destination_cards = ""
+        if destinations and len(destinations) > 0:
+            destination_cards = """
+                <div style="margin: 30px 0;">
+                    <h2 style="font-size: 20px; color: #0f172a; margin-bottom: 20px; font-family: Georgia, serif;">
+                        Here are some destinations we think you'll love:
+                    </h2>
+            """
+            for dest in destinations[:4]:  # Limit to 4 destinations
+                destination_cards += f"""
+                    <div style="margin-bottom: 20px; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+                        <img src="{dest.get('image_url', '')}" alt="{dest.get('name', '')}"
+                             style="width: 100%; height: 180px; object-fit: cover;">
+                        <div style="padding: 16px;">
+                            <p style="font-size: 11px; color: #10b981; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px 0;">
+                                {dest.get('location', '')}
+                            </p>
+                            <h3 style="font-size: 18px; color: #0f172a; margin: 0 0 10px 0; font-family: Georgia, serif;">
+                                {dest.get('name', '')}
+                            </h3>
+                            <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;">
+                                {dest.get('description', '')[:120]}...
+                            </p>
+                        </div>
+                    </div>
+                """
+            destination_cards += "</div>"
+
+        intro_text = (
+            "You're now subscribed to our weekly newsletter. Every week, we'll send you "
+            "handpicked travel destinations tailored to your interests."
+        )
+        if destinations and len(destinations) > 0:
+            intro_text = (
+                "You're now subscribed to our weekly newsletter! Based on your saved destinations, "
+                "we've already found some places we think you'll love."
+            )
+
         params = {
             "from": "Voyager <onboarding@resend.dev>",  # Update with your verified domain
             "to": [to_email],
             "subject": "Welcome to Voyager's Weekly Destinations!",
             "html": f"""
-                <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-                    <h1 style="font-size: 32px; color: #0f172a; margin-bottom: 20px;">
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+                    <h1 style="font-size: 32px; color: #0f172a; margin-bottom: 20px; font-family: Georgia, serif;">
                         Welcome to Voyager, {user_name}!
                     </h1>
 
                     <p style="font-size: 16px; color: #64748b; line-height: 1.6; margin-bottom: 20px;">
-                        You're now subscribed to our weekly newsletter. Every week, we'll send you
-                        handpicked travel destinations tailored to your interests.
+                        {intro_text}
                     </p>
+
+                    {destination_cards}
 
                     <p style="font-size: 16px; color: #64748b; line-height: 1.6; margin-bottom: 30px;">
                         Get ready to discover your next adventure!

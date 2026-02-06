@@ -34,6 +34,7 @@ interface TripPlanningFormProps {
   onSubmit: (trip: TripPlan) => void;
   savedDestinations: Destination[];
   googleMapsApiKey: string;
+  userId?: string; // User ID for user-specific form caching
 }
 
 // --- Countries and Regions ---
@@ -347,9 +348,37 @@ function formatDisplayDate(dateStr: string) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// --- Form cache config ---
+const FORM_CACHE_KEY_PREFIX = 'voyager-trip-form-cache';
+
+interface FormCache {
+  destination: string;
+  specificDestinations: SpecificDestination[];
+  startDate: string | null;
+  endDate: string | null;
+  calMonth: number;
+  calYear: number;
+  currency: string;
+  budgetAmount: number;
+  companions: string;
+  selectedActivities: string[];
+  savedAt: number;
+}
+
+// Helper to get user-specific cache key
+function getFormCacheKey(userId?: string): string {
+  return userId ? `${FORM_CACHE_KEY_PREFIX}_${userId}` : FORM_CACHE_KEY_PREFIX;
+}
+
 // --- Component ---
 
-export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey }: TripPlanningFormProps) {
+export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey, userId }: TripPlanningFormProps) {
+  // Track if initial load from cache is done
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Get the cache key for the current user
+  const cacheKey = getFormCacheKey(userId);
+
   // Field 1
   const [destination, setDestination] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -383,6 +412,82 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
 
   // Validation
   const [errors, setErrors] = useState<string[]>([]);
+
+  // Load cached form data on mount or when user changes
+  useEffect(() => {
+    // Reset form state first when user changes
+    setDestination('');
+    setSpecificDestinations([]);
+    setStartDate(null);
+    setEndDate(null);
+    setCalMonth(today.getMonth());
+    setCalYear(today.getFullYear());
+    setCurrency('SGD');
+    setBudgetAmount(5000);
+    setCompanions('');
+    setSelectedActivities([]);
+    setIsInitialized(false);
+
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const data: FormCache = JSON.parse(cached);
+        // Only restore if cache is less than 24 hours old
+        const cacheAge = Date.now() - data.savedAt;
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (cacheAge < maxAge) {
+          setDestination(data.destination || '');
+          setSpecificDestinations(data.specificDestinations || []);
+          setStartDate(data.startDate);
+          setEndDate(data.endDate);
+          setCalMonth(data.calMonth ?? today.getMonth());
+          setCalYear(data.calYear ?? today.getFullYear());
+          setCurrency(data.currency || 'SGD');
+          setBudgetAmount(data.budgetAmount ?? 5000);
+          setCompanions(data.companions || '');
+          setSelectedActivities(data.selectedActivities || []);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load form cache:', err);
+    }
+    setIsInitialized(true);
+  }, [cacheKey]);
+
+  // Save form data to cache whenever it changes
+  useEffect(() => {
+    if (!isInitialized) return; // Don't save until initial load is done
+
+    const formData: FormCache = {
+      destination,
+      specificDestinations,
+      startDate,
+      endDate,
+      calMonth,
+      calYear,
+      currency,
+      budgetAmount,
+      companions,
+      selectedActivities,
+      savedAt: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(formData));
+    } catch (err) {
+      console.error('Failed to save form cache:', err);
+    }
+  }, [isInitialized, cacheKey, destination, specificDestinations, startDate, endDate, calMonth, calYear, currency, budgetAmount, companions, selectedActivities]);
+
+  // Clear form cache
+  const clearFormCache = () => {
+    try {
+      localStorage.removeItem(cacheKey);
+    } catch (err) {
+      console.error('Failed to clear form cache:', err);
+    }
+  };
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -594,6 +699,9 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
       specificDestinations,
       createdAt: new Date().toISOString(),
     };
+
+    // Clear the form cache after successful submission
+    clearFormCache();
 
     onSubmit(trip);
   }

@@ -91,7 +91,7 @@ function VoyagerApp() {
         };
       });
 
-      // Send welcome email via backend
+      // Send welcome email via backend with personalized destinations
       try {
         await fetch('http://127.0.0.1:5001/api/newsletter/welcome', {
           method: 'POST',
@@ -100,7 +100,8 @@ function VoyagerApp() {
           },
           body: JSON.stringify({
             email: user.email,
-            name: user.user_metadata?.full_name || 'Traveler'
+            name: user.user_metadata?.full_name || 'Traveler',
+            tags: topTags.slice(0, 10) // Send top 10 tags for personalized destinations
           })
         });
       } catch (emailError) {
@@ -654,6 +655,7 @@ function VoyagerApp() {
             onSubmit={handleTripSubmit}
             savedDestinations={savedDestinations}
             googleMapsApiKey={(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}
+            userId={user?.id}
           />
         ) : currentView === 'signIn' ? (
           <SignIn

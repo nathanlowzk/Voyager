@@ -152,15 +152,17 @@ def generate_single_destination():
             prompt_text = (
                 f"Generate 1 real, specific travel bucket list destination in {c_region} "
                 f"that features {c_theme}. It must be perfect for {c_style}. "
-                "Do not invent places. Return JSON with fields: name, location, description, tags, imagePrompt, isPersonalized."
+                "Do not invent places. Return JSON with fields: name, location, description, tags, imagePrompt, isPersonalized, country, region. "
+                "The 'country' field must be the exact country name (e.g., 'Japan', 'Thailand', 'Italy'). "
+                "The 'region' field must be one of: 'Oceania', 'East Asia', 'Middle East', 'South East Asia', 'Europe', 'North America', 'South America', 'Central America', 'Africa'."
             )
 
             response = client.models.generate_content(
-                model='gemini-2.5-flash-lite', 
+                model='gemini-2.5-flash-lite',
                 contents=prompt_text,
                 config=types.GenerateContentConfig(
                     response_mime_type='application/json',
-                    temperature=1.0, 
+                    temperature=1.0,
                     response_schema={
                         "type": "OBJECT", # Requesting a Single Object now, not Array
                         "properties": {
@@ -169,14 +171,16 @@ def generate_single_destination():
                             "description": {"type": "STRING"},
                             "tags": {"type": "ARRAY", "items": {"type": "STRING"}},
                             "imagePrompt": {"type": "STRING"},
-                            "isPersonalized": {"type": "BOOLEAN"}
+                            "isPersonalized": {"type": "BOOLEAN"},
+                            "country": {"type": "STRING"},
+                            "region": {"type": "STRING"}
                         },
-                        "required": ["name", "location", "description", "tags", "imagePrompt", "isPersonalized"]
+                        "required": ["name", "location", "description", "tags", "imagePrompt", "isPersonalized", "country", "region"]
                     }
                 )
             )
             destination_data = json.loads(response.text)
-            break 
+            break
         except Exception as e:
             print(f"   ⚠️ Text Error: {e}. Retrying...")
             time.sleep(2)
