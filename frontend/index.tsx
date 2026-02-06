@@ -650,7 +650,11 @@ function VoyagerApp() {
             onCardClick={(dest) => setSelectedDestination(dest)}
           />
         ) : currentView === 'tripForm' ? (
-          <TripPlanningForm onSubmit={handleTripSubmit} />
+          <TripPlanningForm
+            onSubmit={handleTripSubmit}
+            savedDestinations={savedDestinations}
+            googleMapsApiKey={(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}
+          />
         ) : currentView === 'signIn' ? (
           <SignIn
             onSignIn={() => {

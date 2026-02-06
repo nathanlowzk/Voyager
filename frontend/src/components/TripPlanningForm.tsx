@@ -1,8 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as Lucide from 'lucide-react';
 import { Button } from './Button';
+import { Destination } from './DestinationCard';
+
+// --- Budget slider config ---
+const BUDGET_MAX = 10000;
+const BUDGET_STEP = 100;
 
 // --- Types ---
+
+// A specific place the user wants to visit
+export interface SpecificDestination {
+  id: string;
+  name: string;
+  address: string;
+  placeId?: string; // Google Maps place ID
+}
 
 export interface TripPlan {
   id: string;
@@ -13,44 +26,243 @@ export interface TripPlan {
   budgetRange: string;
   companions: string;
   activities: string[];
+  specificDestinations: SpecificDestination[];
   createdAt: string;
 }
 
 interface TripPlanningFormProps {
   onSubmit: (trip: TripPlan) => void;
+  savedDestinations: Destination[];
+  googleMapsApiKey: string;
 }
 
-// --- Destination suggestions ---
+// --- Countries and Regions ---
 
-const DESTINATIONS = [
-  "Amsterdam, Netherlands", "Athens, Greece", "Auckland, New Zealand",
-  "Bali, Indonesia", "Bangkok, Thailand", "Barcelona, Spain", "Berlin, Germany",
-  "Buenos Aires, Argentina", "Cairo, Egypt", "Cape Town, South Africa",
-  "Cancun, Mexico", "Copenhagen, Denmark", "Dubai, UAE", "Dublin, Ireland",
-  "Edinburgh, Scotland", "Florence, Italy", "Hanoi, Vietnam",
-  "Havana, Cuba", "Helsinki, Finland", "Hong Kong, China",
-  "Istanbul, Turkey", "Jakarta, Indonesia", "Kyoto, Japan",
-  "Lisbon, Portugal", "London, United Kingdom", "Los Angeles, USA",
-  "Madrid, Spain", "Marrakech, Morocco", "Melbourne, Australia",
-  "Mexico City, Mexico", "Milan, Italy", "Mumbai, India",
-  "Munich, Germany", "Nairobi, Kenya", "New York, USA",
-  "Osaka, Japan", "Oslo, Norway", "Paris, France",
-  "Prague, Czech Republic", "Queenstown, New Zealand", "Reykjavik, Iceland",
-  "Rio de Janeiro, Brazil", "Rome, Italy", "San Francisco, USA",
-  "Santorini, Greece", "Seoul, South Korea", "Singapore, Singapore",
-  "Stockholm, Sweden", "Sydney, Australia", "Taipei, Taiwan",
-  "Tokyo, Japan", "Toronto, Canada", "Vancouver, Canada",
-  "Venice, Italy", "Vienna, Austria", "Zurich, Switzerland",
+// Regions
+const REGIONS = [
+  "Oceania",
+  "East Asia",
+  "Middle East",
+  "South East Asia",
+  "Europe",
+  "North America",
+  "South America",
+  "Central America",
+  "Africa",
 ];
 
-// --- Currency config ---
+// 193 UN member states + Vatican City, Palestine, Taiwan, Kosovo
+const COUNTRIES = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Andorra",
+  "Angola",
+  "Antigua and Barbuda",
+  "Argentina",
+  "Armenia",
+  "Australia",
+  "Austria",
+  "Azerbaijan",
+  "Bahamas",
+  "Bahrain",
+  "Bangladesh",
+  "Barbados",
+  "Belarus",
+  "Belgium",
+  "Belize",
+  "Benin",
+  "Bhutan",
+  "Bolivia",
+  "Bosnia and Herzegovina",
+  "Botswana",
+  "Brazil",
+  "Brunei",
+  "Bulgaria",
+  "Burkina Faso",
+  "Burundi",
+  "Cabo Verde",
+  "Cambodia",
+  "Cameroon",
+  "Canada",
+  "Central African Republic",
+  "Chad",
+  "Chile",
+  "China",
+  "Colombia",
+  "Comoros",
+  "Congo (Democratic Republic)",
+  "Congo (Republic)",
+  "Costa Rica",
+  "Croatia",
+  "Cuba",
+  "Cyprus",
+  "Czech Republic",
+  "Denmark",
+  "Djibouti",
+  "Dominica",
+  "Dominican Republic",
+  "East Timor",
+  "Ecuador",
+  "Egypt",
+  "El Salvador",
+  "Equatorial Guinea",
+  "Eritrea",
+  "Estonia",
+  "Eswatini",
+  "Ethiopia",
+  "Fiji",
+  "Finland",
+  "France",
+  "Gabon",
+  "Gambia",
+  "Georgia",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Grenada",
+  "Guatemala",
+  "Guinea",
+  "Guinea-Bissau",
+  "Guyana",
+  "Haiti",
+  "Honduras",
+  "Hungary",
+  "Iceland",
+  "India",
+  "Indonesia",
+  "Iran",
+  "Iraq",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Ivory Coast",
+  "Jamaica",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kiribati",
+  "Kosovo",
+  "Kuwait",
+  "Kyrgyzstan",
+  "Laos",
+  "Latvia",
+  "Lebanon",
+  "Lesotho",
+  "Liberia",
+  "Libya",
+  "Liechtenstein",
+  "Lithuania",
+  "Luxembourg",
+  "Madagascar",
+  "Malawi",
+  "Malaysia",
+  "Maldives",
+  "Mali",
+  "Malta",
+  "Marshall Islands",
+  "Mauritania",
+  "Mauritius",
+  "Mexico",
+  "Micronesia",
+  "Moldova",
+  "Monaco",
+  "Mongolia",
+  "Montenegro",
+  "Morocco",
+  "Mozambique",
+  "Myanmar",
+  "Namibia",
+  "Nauru",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nicaragua",
+  "Niger",
+  "Nigeria",
+  "North Korea",
+  "North Macedonia",
+  "Norway",
+  "Oman",
+  "Pakistan",
+  "Palau",
+  "Palestine",
+  "Panama",
+  "Papua New Guinea",
+  "Paraguay",
+  "Peru",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Qatar",
+  "Romania",
+  "Russia",
+  "Rwanda",
+  "Saint Kitts and Nevis",
+  "Saint Lucia",
+  "Saint Vincent and the Grenadines",
+  "Samoa",
+  "San Marino",
+  "Sao Tome and Principe",
+  "Saudi Arabia",
+  "Senegal",
+  "Serbia",
+  "Seychelles",
+  "Sierra Leone",
+  "Singapore",
+  "Slovakia",
+  "Slovenia",
+  "Solomon Islands",
+  "Somalia",
+  "South Africa",
+  "South Korea",
+  "South Sudan",
+  "Spain",
+  "Sri Lanka",
+  "Sudan",
+  "Suriname",
+  "Sweden",
+  "Switzerland",
+  "Syria",
+  "Taiwan",
+  "Tajikistan",
+  "Tanzania",
+  "Thailand",
+  "Togo",
+  "Tonga",
+  "Trinidad and Tobago",
+  "Tunisia",
+  "Turkey",
+  "Turkmenistan",
+  "Tuvalu",
+  "Uganda",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uruguay",
+  "Uzbekistan",
+  "Vanuatu",
+  "Vatican City",
+  "Venezuela",
+  "Vietnam",
+  "Yemen",
+  "Zambia",
+  "Zimbabwe",
+];
+
+// Combined list: Regions first (marked), then countries
+const DESTINATIONS = [
+  ...REGIONS.map(r => ({ name: r, isRegion: true })),
+  ...COUNTRIES.map(c => ({ name: c, isRegion: false })),
+];
+
+// --- Currency config (SGD and USD only) ---
 
 const CURRENCIES = [
   { code: 'SGD', symbol: 'S$', label: 'SGD' },
   { code: 'USD', symbol: '$', label: 'USD' },
-  { code: 'GBP', symbol: '\u00A3', label: 'GBP' },
-  { code: 'JPY', symbol: '\u00A5', label: 'JPY' },
-  { code: 'EUR', symbol: '\u20AC', label: 'EUR' },
 ];
 
 // --- Companion options ---
@@ -74,6 +286,40 @@ const ACTIVITIES = [
   { value: 'shopping', label: 'Shopping', icon: Lucide.ShoppingBag },
   { value: 'spa-wellness', label: 'Spa & Wellness', icon: Lucide.Flower2 },
 ];
+
+// --- Country code mapping for Google Maps API ---
+const COUNTRY_CODES: Record<string, string> = {
+  "Afghanistan": "af", "Albania": "al", "Algeria": "dz", "Andorra": "ad", "Angola": "ao",
+  "Argentina": "ar", "Armenia": "am", "Australia": "au", "Austria": "at", "Azerbaijan": "az",
+  "Bahamas": "bs", "Bahrain": "bh", "Bangladesh": "bd", "Barbados": "bb", "Belarus": "by",
+  "Belgium": "be", "Belize": "bz", "Benin": "bj", "Bhutan": "bt", "Bolivia": "bo",
+  "Bosnia and Herzegovina": "ba", "Botswana": "bw", "Brazil": "br", "Brunei": "bn", "Bulgaria": "bg",
+  "Cambodia": "kh", "Cameroon": "cm", "Canada": "ca", "Chile": "cl", "China": "cn",
+  "Colombia": "co", "Costa Rica": "cr", "Croatia": "hr", "Cuba": "cu", "Cyprus": "cy",
+  "Czech Republic": "cz", "Denmark": "dk", "Dominican Republic": "do", "Ecuador": "ec", "Egypt": "eg",
+  "El Salvador": "sv", "Estonia": "ee", "Ethiopia": "et", "Fiji": "fj", "Finland": "fi",
+  "France": "fr", "Germany": "de", "Ghana": "gh", "Greece": "gr", "Guatemala": "gt",
+  "Honduras": "hn", "Hungary": "hu", "Iceland": "is", "India": "in", "Indonesia": "id",
+  "Iran": "ir", "Iraq": "iq", "Ireland": "ie", "Israel": "il", "Italy": "it",
+  "Jamaica": "jm", "Japan": "jp", "Jordan": "jo", "Kazakhstan": "kz", "Kenya": "ke",
+  "Kuwait": "kw", "Laos": "la", "Latvia": "lv", "Lebanon": "lb", "Lithuania": "lt",
+  "Luxembourg": "lu", "Madagascar": "mg", "Malaysia": "my", "Maldives": "mv", "Malta": "mt",
+  "Mexico": "mx", "Monaco": "mc", "Mongolia": "mn", "Montenegro": "me", "Morocco": "ma",
+  "Myanmar": "mm", "Nepal": "np", "Netherlands": "nl", "New Zealand": "nz", "Nicaragua": "ni",
+  "Nigeria": "ng", "Norway": "no", "Oman": "om", "Pakistan": "pk", "Panama": "pa",
+  "Paraguay": "py", "Peru": "pe", "Philippines": "ph", "Poland": "pl", "Portugal": "pt",
+  "Qatar": "qa", "Romania": "ro", "Russia": "ru", "Saudi Arabia": "sa", "Senegal": "sn",
+  "Serbia": "rs", "Singapore": "sg", "Slovakia": "sk", "Slovenia": "si", "South Africa": "za",
+  "South Korea": "kr", "Spain": "es", "Sri Lanka": "lk", "Sweden": "se", "Switzerland": "ch",
+  "Taiwan": "tw", "Tanzania": "tz", "Thailand": "th", "Tunisia": "tn", "Turkey": "tr",
+  "Ukraine": "ua", "United Arab Emirates": "ae", "United Kingdom": "gb", "United States": "us",
+  "Uruguay": "uy", "Uzbekistan": "uz", "Vatican City": "va", "Venezuela": "ve", "Vietnam": "vn",
+  "Zambia": "zm", "Zimbabwe": "zw"
+};
+
+function getCountryCode(country: string): string | null {
+  return COUNTRY_CODES[country] || null;
+}
 
 // --- Calendar helpers ---
 
@@ -103,11 +349,20 @@ function formatDisplayDate(dateStr: string) {
 
 // --- Component ---
 
-export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
+export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey }: TripPlanningFormProps) {
   // Field 1
   const [destination, setDestination] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Specific destinations section
+  const [specificDestinations, setSpecificDestinations] = useState<SpecificDestination[]>([]);
+  const [placeSearch, setPlaceSearch] = useState('');
+  const [placePredictions, setPlacePredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false);
+  const placesRef = useRef<HTMLDivElement>(null);
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
 
   // Field 2
   const today = new Date();
@@ -116,9 +371,9 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
 
-  // Field 3
+  // Field 3: Budget
   const [currency, setCurrency] = useState('SGD');
-  const [budgetRange, setBudgetRange] = useState('');
+  const [budgetAmount, setBudgetAmount] = useState(5000); // Slider value
 
   // Field 4
   const [companions, setCompanions] = useState('');
@@ -135,14 +390,133 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
       }
+      if (placesRef.current && !placesRef.current.contains(e.target as Node)) {
+        setShowPlaceSuggestions(false);
+      }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // --- Field 1: Destination ---
+  // Load Google Maps script
+  useEffect(() => {
+    if (window.google?.maps?.places) {
+      setGoogleMapsLoaded(true);
+      autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+    script.async = true;
+    script.onload = () => {
+      setGoogleMapsLoaded(true);
+      autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // Don't remove the script as it might be used elsewhere
+    };
+  }, [googleMapsApiKey]);
+
+  // Handle place search with debounce
+  const searchPlaces = useCallback((input: string) => {
+    if (!autocompleteServiceRef.current || input.length < 2) {
+      setPlacePredictions([]);
+      return;
+    }
+
+    // Add country restriction if a country is selected (not a region)
+    const isRegion = REGIONS.includes(destination);
+    const request: google.maps.places.AutocompletionRequest = {
+      input,
+      types: ['establishment', 'geocode'],
+    };
+
+    // If a specific country is selected, restrict to that country
+    if (destination && !isRegion) {
+      // Get ISO country code (simplified mapping for common countries)
+      const countryCode = getCountryCode(destination);
+      if (countryCode) {
+        request.componentRestrictions = { country: countryCode };
+      }
+    }
+
+    autocompleteServiceRef.current.getPlacePredictions(
+      request,
+      (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setPlacePredictions(predictions);
+        } else {
+          setPlacePredictions([]);
+        }
+      }
+    );
+  }, [destination]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (placeSearch.length >= 2) {
+        searchPlaces(placeSearch);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [placeSearch, searchPlaces]);
+
+  // Add a place from Google Maps search
+  const addPlaceFromSearch = (prediction: google.maps.places.AutocompletePrediction) => {
+    const newDest: SpecificDestination = {
+      id: `place-${Date.now()}`,
+      name: prediction.structured_formatting.main_text,
+      address: prediction.description,
+      placeId: prediction.place_id,
+    };
+    setSpecificDestinations(prev => [...prev, newDest]);
+    setPlaceSearch('');
+    setPlacePredictions([]);
+    setShowPlaceSuggestions(false);
+  };
+
+  // Add a saved destination to specific destinations
+  const addSavedDestination = (dest: Destination) => {
+    // Check if already added
+    if (specificDestinations.some(d => d.id === `saved-${dest.id}`)) return;
+
+    const newDest: SpecificDestination = {
+      id: `saved-${dest.id}`,
+      name: dest.name,
+      address: dest.location,
+    };
+    setSpecificDestinations(prev => [...prev, newDest]);
+  };
+
+  // Remove a specific destination
+  const removeSpecificDestination = (id: string) => {
+    setSpecificDestinations(prev => prev.filter(d => d.id !== id));
+  };
+
+  // Filter saved destinations by selected country/region
+  const filteredSavedDestinations = savedDestinations.filter(dest => {
+    if (!destination) return false;
+
+    const isRegion = REGIONS.includes(destination);
+
+    if (isRegion) {
+      // Match by region
+      return dest.region?.toLowerCase() === destination.toLowerCase();
+    } else {
+      // Match by country (check location field for country name)
+      const locationLower = dest.location.toLowerCase();
+      const destLower = destination.toLowerCase();
+      return locationLower.includes(destLower) || dest.country?.toLowerCase() === destLower;
+    }
+  });
+
+  // --- Field 1: Country/Region ---
   const filteredDestinations = destination.length >= 2
-    ? DESTINATIONS.filter(d => d.toLowerCase().includes(destination.toLowerCase())).slice(0, 8)
+    ? DESTINATIONS.filter(d => d.name.toLowerCase().includes(destination.toLowerCase())).slice(0, 8)
     : [];
 
   // --- Field 2: Calendar ---
@@ -180,11 +554,16 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
   // --- Field 3: Budget ---
   const currencyObj = CURRENCIES.find(c => c.code === currency)!;
 
-  const budgetRanges = [
-    { value: 'low', label: `Low`, range: `${currencyObj.symbol}0 - ${currencyObj.symbol}1,000` },
-    { value: 'medium', label: `Medium`, range: `${currencyObj.symbol}1,000 - ${currencyObj.symbol}2,500` },
-    { value: 'high', label: `High`, range: `${currencyObj.symbol}2,500+` },
-  ];
+  // Format amount with commas
+  const formatAmount = (amount: number) => amount.toLocaleString();
+
+  // Get the budget range string for form submission
+  const getBudgetRangeString = () => {
+    if (budgetAmount >= BUDGET_MAX) {
+      return `${currencyObj.symbol}${formatAmount(BUDGET_MAX)}++`;
+    }
+    return `${currencyObj.symbol}${formatAmount(budgetAmount)}`;
+  };
 
   // --- Field 5: Activities ---
   function toggleActivity(value: string) {
@@ -198,7 +577,6 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
     const newErrors: string[] = [];
     if (!destination.trim()) newErrors.push('destination');
     if (!startDate || !endDate) newErrors.push('dates');
-    if (!budgetRange) newErrors.push('budget');
     if (!companions) newErrors.push('companions');
     if (selectedActivities.length === 0) newErrors.push('activities');
     setErrors(newErrors);
@@ -210,9 +588,10 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
       startDate: startDate!,
       endDate: endDate!,
       currency,
-      budgetRange,
+      budgetRange: getBudgetRangeString(),
       companions,
       activities: selectedActivities,
+      specificDestinations,
       createdAt: new Date().toISOString(),
     };
 
@@ -240,9 +619,9 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
       </div>
 
       <div className="space-y-10">
-        {/* Field 1: Destination */}
+        {/* Field 1: Country/Region */}
         <div>
-          <label className={sectionLabel}>What is your destination of choice?</label>
+          <label className={sectionLabel}>Which country or region do you want to visit?</label>
           <div className="relative" ref={suggestionsRef}>
             <div className="relative">
               <Lucide.MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -251,28 +630,167 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
                 value={destination}
                 onChange={(e) => { setDestination(e.target.value); setShowSuggestions(true); }}
                 onFocus={() => { if (destination.length >= 2) setShowSuggestions(true); }}
-                placeholder="Search for a city or destination..."
+                placeholder="Type to search countries or regions..."
                 className={`w-full pl-12 pr-4 py-4 rounded-full border-2 text-base outline-none transition-all ${fieldHasError('destination') ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-emerald-500'}`}
               />
             </div>
             {showSuggestions && filteredDestinations.length > 0 && (
-              <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
+              <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden max-h-72 overflow-y-auto">
                 {filteredDestinations.map(d => (
                   <button
-                    key={d}
-                    onClick={() => { setDestination(d); setShowSuggestions(false); }}
+                    key={d.name}
+                    onClick={() => { setDestination(d.name); setShowSuggestions(false); }}
                     className="w-full text-left px-5 py-3 hover:bg-emerald-50 transition-colors text-sm flex items-center gap-3"
                   >
-                    <Lucide.MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="text-slate-700">{d}</span>
+                    {d.isRegion ? (
+                      <Lucide.Globe className="w-4 h-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <Lucide.MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                    )}
+                    <span className="text-slate-700">{d.name}</span>
+                    {d.isRegion && (
+                      <span className="ml-auto text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Region</span>
+                    )}
                   </button>
                 ))}
               </div>
             )}
           </div>
           {fieldHasError('destination') && (
-            <p className="text-rose-500 text-xs mt-2 ml-4">Please select a destination</p>
+            <p className="text-rose-500 text-xs mt-2 ml-4">Please select a country or region</p>
           )}
+        </div>
+
+        {/* Specific Destinations Section */}
+        <div className="rounded-3xl border-2 border-slate-200 p-6 bg-gradient-to-br from-slate-50 to-white">
+          <div className="flex items-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-2">
+            <Lucide.Navigation className="w-4 h-4" />
+            Optional
+          </div>
+          <label className={sectionLabel}>Any specific destinations in mind?</label>
+          <p className="text-sm text-slate-500 mb-6">Search for places or select from your saved destinations</p>
+
+          {/* Part 1: Google Maps Search */}
+          <div className="relative mb-6" ref={placesRef}>
+            <div className="relative">
+              <Lucide.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                value={placeSearch}
+                onChange={(e) => { setPlaceSearch(e.target.value); setShowPlaceSuggestions(true); }}
+                onFocus={() => { if (placeSearch.length >= 2) setShowPlaceSuggestions(true); }}
+                placeholder={googleMapsLoaded ? "Search for attractions, hotels, restaurants..." : "Loading Google Maps..."}
+                disabled={!googleMapsLoaded}
+                className="w-full pl-12 pr-4 py-4 rounded-full border-2 border-slate-200 text-base outline-none transition-all focus:border-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+              />
+            </div>
+            {showPlaceSuggestions && placePredictions.length > 0 && (
+              <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden max-h-72 overflow-y-auto">
+                {placePredictions.map(prediction => (
+                  <button
+                    key={prediction.place_id}
+                    onClick={() => addPlaceFromSearch(prediction)}
+                    className="w-full text-left px-5 py-3 hover:bg-emerald-50 transition-colors text-sm flex items-center gap-3"
+                  >
+                    <Lucide.MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-slate-700 font-medium truncate">{prediction.structured_formatting.main_text}</span>
+                      <span className="text-slate-400 text-xs truncate">{prediction.structured_formatting.secondary_text}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Part 2: Saved Destinations (filtered by country/region) */}
+          {destination && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Lucide.Heart className="w-4 h-4 text-rose-500" />
+                <span className="text-sm font-medium text-slate-700">
+                  Your saved destinations in {destination}
+                </span>
+              </div>
+              {filteredSavedDestinations.length > 0 ? (
+                <div
+                  className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {filteredSavedDestinations.map(dest => {
+                    const isAdded = specificDestinations.some(d => d.id === `saved-${dest.id}`);
+                    return (
+                      <button
+                        key={dest.id}
+                        onClick={() => addSavedDestination(dest)}
+                        disabled={isAdded}
+                        className={`shrink-0 w-48 rounded-2xl border-2 overflow-hidden transition-all ${
+                          isAdded
+                            ? 'border-emerald-500 bg-emerald-50 opacity-60 cursor-not-allowed'
+                            : 'border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer'
+                        }`}
+                      >
+                        {dest.imageUrl && (
+                          <div className="h-24 overflow-hidden">
+                            <img src={dest.imageUrl} alt={dest.name} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <p className="font-medium text-sm text-slate-800 truncate">{dest.name}</p>
+                          <p className="text-xs text-slate-500 truncate">{dest.location}</p>
+                          {isAdded && (
+                            <span className="text-xs text-emerald-600 flex items-center gap-1 mt-1">
+                              <Lucide.Check className="w-3 h-3" /> Added
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <Lucide.MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500">No saved destinations in {destination}</p>
+                  <p className="text-xs text-slate-400 mt-1">Save destinations from the Explore page</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Part 3: Accumulated Destinations */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Lucide.ListChecks className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-medium text-slate-700">
+                Selected places ({specificDestinations.length})
+              </span>
+            </div>
+            {specificDestinations.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {specificDestinations.map(dest => (
+                  <div
+                    key={dest.id}
+                    className="flex items-center gap-2 pl-4 pr-2 py-2 bg-emerald-50 border border-emerald-200 rounded-full"
+                  >
+                    <Lucide.MapPin className="w-3 h-3 text-emerald-600" />
+                    <span className="text-sm text-emerald-800 font-medium">{dest.name}</span>
+                    <button
+                      onClick={() => removeSpecificDestination(dest.id)}
+                      className="p-1 hover:bg-emerald-200 rounded-full transition-colors"
+                    >
+                      <Lucide.X className="w-3 h-3 text-emerald-600" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <p className="text-sm text-slate-500">No places selected yet</p>
+                <p className="text-xs text-slate-400 mt-1">Search above or pick from your saved destinations</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Field 2: Travel Dates */}
@@ -350,38 +868,80 @@ export function TripPlanningForm({ onSubmit }: TripPlanningFormProps) {
         {/* Field 3: Budget */}
         <div>
           <label className={sectionLabel}>What is your budget?</label>
-          <div className="flex flex-col gap-4">
-            {/* Currency selector */}
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-6">
+            {/* Currency toggle */}
+            <div className="flex items-center gap-4">
               <Lucide.Wallet className="w-5 h-5 text-slate-400" />
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="px-4 py-3 rounded-full border-2 border-slate-200 text-sm font-medium outline-none focus:border-emerald-500 transition-all bg-white cursor-pointer"
-              >
+              <div className="flex rounded-full border-2 border-slate-200 overflow-hidden">
                 {CURRENCIES.map(c => (
-                  <option key={c.code} value={c.code}>{c.symbol} {c.label}</option>
+                  <button
+                    key={c.code}
+                    onClick={() => setCurrency(c.code)}
+                    className={`px-5 py-2 text-sm font-medium transition-all ${
+                      currency === c.code
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {c.symbol} {c.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
-            {/* Range pills */}
-            <div className="flex flex-wrap gap-3">
-              {budgetRanges.map(r => (
-                <button
-                  key={r.value}
-                  onClick={() => setBudgetRange(r.value)}
-                  className={`${pillBase} ${budgetRange === r.value ? pillActive : pillInactive} flex-col items-start !rounded-2xl !px-6 !py-4`}
-                >
-                  <span className="font-semibold">{r.label}</span>
-                  <span className="text-xs opacity-70">{r.range}</span>
-                </button>
-              ))}
+            {/* Budget display */}
+            <div className="text-center">
+              <div className="text-4xl font-serif text-slate-900 mb-2">
+                {budgetAmount >= BUDGET_MAX ? (
+                  <>{currencyObj.symbol}{formatAmount(BUDGET_MAX)}<span className="text-emerald-500">++</span></>
+                ) : (
+                  <>{currencyObj.symbol}{formatAmount(budgetAmount)}</>
+                )}
+              </div>
+              <p className="text-sm text-slate-500">
+                {budgetAmount >= BUDGET_MAX ? 'No budget limit' : 'per person'}
+              </p>
+            </div>
+
+            {/* Slider */}
+            <div className="px-2">
+              <input
+                type="range"
+                min={0}
+                max={BUDGET_MAX}
+                step={BUDGET_STEP}
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(Number(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer
+                  [&::-webkit-slider-thumb]:appearance-none
+                  [&::-webkit-slider-thumb]:w-6
+                  [&::-webkit-slider-thumb]:h-6
+                  [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:bg-emerald-500
+                  [&::-webkit-slider-thumb]:shadow-lg
+                  [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-webkit-slider-thumb]:transition-transform
+                  [&::-webkit-slider-thumb]:hover:scale-110
+                  [&::-moz-range-thumb]:w-6
+                  [&::-moz-range-thumb]:h-6
+                  [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:bg-emerald-500
+                  [&::-moz-range-thumb]:border-0
+                  [&::-moz-range-thumb]:shadow-lg
+                  [&::-moz-range-thumb]:cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #10b981 0%, #10b981 ${(budgetAmount / BUDGET_MAX) * 100}%, #e2e8f0 ${(budgetAmount / BUDGET_MAX) * 100}%, #e2e8f0 100%)`
+                }}
+              />
+              <div className="flex justify-between mt-2 text-xs text-slate-400">
+                <span>{currencyObj.symbol}0</span>
+                <span>{currencyObj.symbol}{formatAmount(2500)}</span>
+                <span>{currencyObj.symbol}{formatAmount(5000)}</span>
+                <span>{currencyObj.symbol}{formatAmount(7500)}</span>
+                <span>{currencyObj.symbol}{formatAmount(BUDGET_MAX)}++</span>
+              </div>
             </div>
           </div>
-          {fieldHasError('budget') && (
-            <p className="text-rose-500 text-xs mt-2 ml-4">Please select a budget range</p>
-          )}
         </div>
 
         {/* Field 4: Travel Companions */}

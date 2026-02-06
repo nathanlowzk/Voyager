@@ -10,6 +10,8 @@ export interface Destination {
   imagePrompt: string;
   imageUrl?: string;
   isPersonalized: boolean;
+  country?: string;  // Country where the destination is located
+  region?: string;   // Region (e.g., "Europe", "South East Asia")
 }
 
 interface DestinationCardProps {
