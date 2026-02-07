@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as Lucide from 'lucide-react';
 import { Button } from './Button';
-import { TripPlan, SpecificDestination } from './TripPlanningForm';
+import { TripPlan, ItineraryDay } from './TripPlanningForm';
 
 interface TripsProps {
   trips: TripPlan[];
@@ -75,8 +75,17 @@ function TripDetailModal({
               <Lucide.MapPin className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-xl font-serif text-slate-900">{trip.destination}</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="text-xl font-serif text-slate-900">{trip.tripName || trip.destination}</h2>
+              {trip.countries && trip.countries.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {trip.countries.map((country, i) => (
+                    <span key={i} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                      {country}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-slate-400 mt-1">
                 Planned on {new Date(trip.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               </p>
             </div>
@@ -133,23 +142,40 @@ function TripDetailModal({
             </div>
           </div>
 
-          {/* Specific Destinations */}
-          {trip.specificDestinations && trip.specificDestinations.length > 0 && (
+          {/* Itinerary */}
+          {trip.itinerary && trip.itinerary.length > 0 && (
             <div>
               <div className="flex items-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-3">
-                <Lucide.Navigation className="w-4 h-4" />
-                Places to Visit
+                <Lucide.Route className="w-4 h-4" />
+                Itinerary
               </div>
-              <div className="space-y-2">
-                {trip.specificDestinations.map((dest: SpecificDestination) => (
-                  <div
-                    key={dest.id}
-                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl"
-                  >
-                    <Lucide.MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-800 truncate">{dest.name}</p>
-                      <p className="text-xs text-slate-500 truncate">{dest.address}</p>
+              <div className="space-y-4">
+                {trip.itinerary.map((day: ItineraryDay) => (
+                  <div key={day.day} className="bg-slate-50 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-7 h-7 bg-emerald-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {day.day}
+                      </span>
+                      <span className="text-sm font-semibold text-slate-800">
+                        {formatDate(day.date)}
+                      </span>
+                    </div>
+                    <div className="space-y-3 ml-9">
+                      {day.activities.map((activity, idx) => (
+                        <div key={idx} className="flex gap-3">
+                          <span className="text-xs text-emerald-600 font-medium whitespace-nowrap pt-0.5 w-16 shrink-0">
+                            {activity.time}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-800 text-sm">{activity.title}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{activity.description}</p>
+                            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                              <Lucide.MapPin className="w-3 h-3" />
+                              {activity.location}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -239,10 +265,20 @@ export function Trips({ trips, onDeleteTrip, onPlanTrip, onEditTrip }: TripsProp
                       <Lucide.MapPin className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-serif text-slate-900">{trip.destination}</h3>
-                      <p className="text-xs text-slate-400">
-                        Planned on {new Date(trip.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
+                      <h3 className="text-lg font-serif text-slate-900">{trip.tripName || trip.destination}</h3>
+                      {trip.countries && trip.countries.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {trip.countries.map((country, i) => (
+                            <span key={i} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                              {country}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400">
+                          {trip.destination}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">

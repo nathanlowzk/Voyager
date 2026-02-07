@@ -1,179 +1,205 @@
+import React from 'react';
 import * as Lucide from 'lucide-react';
 
-const FEATURES = [
-  {
-    icon: Lucide.Sparkles,
-    title: 'Personalized Discovery',
-    description: 'Our AI learns your travel preferences from your saved destinations and curates recommendations uniquely tailored to your wanderlust.',
-  },
-  {
-    icon: Lucide.Heart,
-    title: 'Travel Passport',
-    description: 'Build your personal collection of dream destinations. Save the places that inspire you and watch your travel identity take shape.',
-  },
-  {
-    icon: Lucide.Map,
-    title: 'Trip Planning',
-    description: 'Turn inspiration into action. Plan trips with budgets, dates, companions, and specific places you want to visit — all in one place.',
-  },
-];
+interface AboutProps {
+  onNavigateToExplore?: () => void;
+}
 
-const STEPS = [
-  {
-    number: '01',
-    title: 'Explore',
-    description: 'Browse curated destinations from around the world, or let our AI surface hidden gems based on your tastes.',
-  },
-  {
-    number: '02',
-    title: 'Save',
-    description: 'Heart the destinations that speak to you. The more you save, the better we understand your travel style.',
-  },
-  {
-    number: '03',
-    title: 'Plan',
-    description: 'Ready to go? Create a trip plan with all the details — budget, dates, travel companions, and must-visit spots.',
-  },
-];
+// --- Styles for the animations & textures ---
+const styles = `
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -5%); }
+    20% { transform: translate(-10%, 5%); }
+    30% { transform: translate(5%, -10%); }
+    40% { transform: translate(-5%, 15%); }
+    50% { transform: translate(-10%, 5%); }
+    60% { transform: translate(15%, 0); }
+    70% { transform: translate(0, 10%); }
+    80% { transform: translate(-15%, 0); }
+    90% { transform: translate(10%, 5%); }
+  }
 
-export function About() {
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.05); }
+  }
+
+  .bg-noise {
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    right: -50%;
+    bottom: -50%;
+    width: 200%;
+    height: 200vh;
+    background: transparent url('http://assets.iceable.com/img/noise-transparent.png') repeat 0 0;
+    background-repeat: repeat;
+    animation: grain 8s steps(10) infinite;
+    opacity: 0.05;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .animate-scroll {
+    animation: scroll 40s linear infinite;
+  }
+  
+  .animate-compass {
+    animation: pulse-slow 10s ease-in-out infinite;
+  }
+`;
+
+export function About({ onNavigateToExplore }: AboutProps) {
   return (
-    <div className="min-h-screen">
-      {/* Hero */}
-      <section className="relative overflow-hidden py-24 md:py-32 px-6">
+    <div className="min-h-screen bg-[#FDFBF7] selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden font-sans text-slate-900">
+      <style>{styles}</style>
+      
+      {/* Cinematic Noise Overlay */}
+      <div className="bg-noise" />
+
+      {/* --- HERO SECTION: Clean Typography --- */}
+      <section className="relative pt-32 pb-24 px-6 overflow-hidden">
+        
+        {/* Subtle Background Element to replace photos */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03]">
+           <Lucide.Compass className="w-[800px] h-[800px] animate-compass" />
+        </div>
+
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-6">
-            <Lucide.Compass className="w-4 h-4" />
-            About Us
+          
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm mb-10">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            <span className="text-xs font-bold tracking-widest uppercase text-slate-500">Established 2026</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-serif mb-8 leading-tight">
-            Travel starts with a
-            <span className="text-emerald-600"> spark of curiosity</span>
+          
+          <h1 className="text-6xl md:text-8xl font-serif leading-[0.9] mb-10 tracking-tight text-slate-900">
+            Don't just <br/>
+            <span className="italic font-light text-slate-400">go there.</span> <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-pink-500 to-emerald-600 animate-gradient">
+              Be there.
+            </span>
           </h1>
-          <p className="text-xl text-slate-500 font-light max-w-2xl mx-auto leading-relaxed">
-            Voyager is a destination discovery platform that helps you find your next
-            adventure, save the places that inspire you, and turn dreams into plans.
+          
+          <p className="text-xl md:text-2xl text-slate-500 font-light max-w-2xl mx-auto leading-relaxed mb-12">
+            Voyager is the antidote to boring travel. We help you find the places that don't make the top 10 lists, but should.
           </p>
         </div>
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-100 rounded-full blur-[160px] opacity-20 -mr-64 -mt-64" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-100 rounded-full blur-[140px] opacity-20 -ml-48 -mb-48" />
       </section>
 
-      {/* Mission */}
-      <section className="py-20 px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-slate-50 rounded-3xl p-10 md:p-14 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-4">
-                <Lucide.Target className="w-4 h-4" />
-                Our Mission
-              </div>
-              <h2 className="text-3xl md:text-4xl font-serif mb-6 leading-tight">
-                Making travel planning feel like travel itself
-              </h2>
-              <p className="text-lg text-slate-500 font-light leading-relaxed mb-4">
-                We believe the best trips start long before you board a plane. They begin
-                with that moment of discovery — stumbling upon a place you never knew existed,
-                or seeing a familiar destination in a completely new light.
-              </p>
-              <p className="text-lg text-slate-500 font-light leading-relaxed">
-                Voyager uses AI to surface destinations that match your unique travel personality,
-                built from the places you love. No generic top-10 lists — just places that feel
-                like they were meant for you.
-              </p>
+      {/* --- SUBTLE MARQUEE --- */}
+      {/* Changed: No dark background, no rotation. Very faint text. */}
+      <div className="w-full border-y border-slate-100 bg-white/50 py-6 overflow-hidden relative z-20">
+        <div className="flex whitespace-nowrap animate-scroll items-center">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex items-center gap-12 mx-6 opacity-30 select-none">
+              <span className="text-5xl font-serif text-slate-300 italic">Kyoto</span>
+              <span className="text-2xl text-slate-200">●</span>
+              <span className="text-5xl font-serif text-slate-300 italic">Reykjavik</span>
+              <span className="text-2xl text-slate-200">●</span>
+              <span className="text-5xl font-serif text-slate-300 italic">Patagonia</span>
+              <span className="text-2xl text-slate-200">●</span>
+              <span className="text-5xl font-serif text-slate-300 italic">Marrakesh</span>
+              <span className="text-2xl text-slate-200">●</span>
             </div>
-            <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-emerald-100 rounded-full opacity-40" />
-          </div>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* Features */}
-      <section className="py-20 px-6">
+      {/* --- HOW IT WORKS: The Boarding Pass --- */}
+      <section className="py-32 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-4">
-              <Lucide.Layers className="w-4 h-4" />
-              Features
-            </div>
-            <h2 className="text-3xl md:text-4xl font-serif">
-              Everything you need, nothing you don't
-            </h2>
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-serif mb-6 text-slate-900">Your Ticket to Everywhere</h2>
+            <p className="text-slate-500 max-w-xl mx-auto text-lg font-light">No complicated spreadsheets. Just three steps to get you from your couch to the departure gate.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={feature.title}
-                  className="group p-8 rounded-2xl border-2 border-slate-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-lg"
-                >
-                  <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-100 transition-colors">
-                    <Icon className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <h3 className="text-xl font-serif mb-3">{feature.title}</h3>
-                  <p className="text-slate-500 font-light leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 px-6 bg-slate-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-4">
-              <Lucide.Route className="w-4 h-4" />
-              How It Works
-            </div>
-            <h2 className="text-3xl md:text-4xl font-serif">
-              Three steps to your next adventure
-            </h2>
-          </div>
-
-          <div className="space-y-8">
-            {STEPS.map((step, i) => (
-              <div
-                key={step.number}
-                className="flex items-start gap-6 md:gap-10"
-              >
-                <div className="shrink-0 w-14 h-14 bg-white rounded-2xl border-2 border-emerald-200 flex items-center justify-center shadow-sm">
-                  <span className="text-lg font-serif text-emerald-600">{step.number}</span>
-                </div>
-                <div className="pt-2">
-                  <h3 className="text-xl font-serif mb-2">{step.title}</h3>
-                  <p className="text-slate-500 font-light leading-relaxed">
-                    {step.description}
-                  </p>
-                  {i < STEPS.length - 1 && (
-                    <div className="w-px h-8 bg-emerald-200 ml-0 mt-6 md:hidden" />
-                  )}
-                </div>
+          <div className="grid md:grid-cols-3 gap-0 bg-white rounded-3xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100">
+            
+            {/* Step 1 */}
+            <div className="p-12 border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative group hover:bg-orange-50/30 transition-colors duration-500">
+              <div className="absolute top-6 right-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest border border-slate-200 px-2 py-1 rounded">Step 01</div>
+              <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mb-8 text-orange-600 group-hover:scale-110 transition-transform duration-500">
+                <Lucide.Search className="w-6 h-6" />
               </div>
-            ))}
+              <h3 className="text-2xl font-serif mb-4 text-slate-900">Discover</h3>
+              <p className="text-slate-500 font-light leading-relaxed">Swipe through thousands of curated hidden gems. No tourist traps allowed.</p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="p-12 border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative group hover:bg-emerald-50/30 transition-colors duration-500">
+              <div className="absolute top-6 right-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest border border-slate-200 px-2 py-1 rounded">Step 02</div>
+              <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-8 text-emerald-600 group-hover:scale-110 transition-transform duration-500">
+                <Lucide.Heart className="w-6 h-6" />
+              </div>
+              <h3 className="text-2xl font-serif mb-4 text-slate-900">Curate</h3>
+              <p className="text-slate-500 font-light leading-relaxed">Save the spots that speak to your soul. Build your personal "Someday" list.</p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="p-12 relative group hover:bg-blue-50/30 transition-colors duration-500">
+              <div className="absolute top-6 right-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest border border-slate-200 px-2 py-1 rounded">Step 03</div>
+              <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-8 text-blue-600 group-hover:scale-110 transition-transform duration-500">
+                <Lucide.Plane className="w-6 h-6" />
+              </div>
+              <h3 className="text-2xl font-serif mb-4 text-slate-900">Depart</h3>
+              <p className="text-slate-500 font-light leading-relaxed">Turn that list into a plan. Book the flight. Pack the bag. Go.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Philosophy */}
-      <section className="py-24 px-6 relative overflow-hidden">
-        <div className="max-w-3xl mx-auto text-center relative z-10">
-          <Lucide.Plane className="w-8 h-8 text-emerald-400 mx-auto mb-6" />
-          <h2 className="text-3xl md:text-4xl font-serif mb-6 leading-tight">
-            Built for dreamers, planners, and everyone in between
-          </h2>
-          <p className="text-lg text-slate-500 font-light leading-relaxed max-w-2xl mx-auto">
-            Voyager is a passion project, built with the belief that everyone deserves
-            travel experiences that feel personal. We're constantly improving our recommendations
-            and adding new features to help you discover the world on your own terms.
-          </p>
+      {/* --- MISSION: The "Newspaper" --- */}
+      <section className="py-32 px-6 bg-slate-900 text-slate-200 overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+             {/* Subtle pattern overlay */}
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
         </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-50 rounded-full blur-[200px] opacity-30" />
+        
+        <div className="max-w-4xl mx-auto relative z-10 text-center">
+          <Lucide.Quote className="w-10 h-10 text-orange-500 mx-auto mb-10 opacity-80" />
+          
+          <h2 className="text-3xl md:text-5xl font-serif leading-tight mb-12 font-light text-white">
+            "The world is a book, and those who do not travel read only one page."
+          </h2>
+          
+          <div className="flex items-center justify-center gap-6">
+             <div className="h-px w-16 bg-slate-700"></div>
+             <p className="text-sm font-bold tracking-widest uppercase text-slate-400">St. Augustine</p>
+             <div className="h-px w-16 bg-slate-700"></div>
+          </div>
+        </div>
       </section>
+
+      {/* --- FOOTER CTA --- */}
+      <section className="py-32 text-center relative overflow-hidden">
+        <div className="max-w-2xl mx-auto relative z-10 px-6">
+          <h2 className="text-5xl md:text-7xl font-serif mb-10 text-slate-900 tracking-tight">
+            Ready to <br/> get lost?
+          </h2>
+          <button className="bg-orange-600 text-white px-10 py-5 rounded-full text-lg font-bold shadow-xl shadow-orange-500/30 hover:scale-105 hover:bg-orange-500 transition-all duration-300"
+                            onClick={onNavigateToExplore}>
+            Explore Destinations
+          </button>
+        </div>
+        
+        {/* Background Stamps (More subtle now) */}
+        <Lucide.Stamp className="absolute top-10 left-10 w-48 h-48 text-slate-200/50 -rotate-12 z-0 pointer-events-none" />
+        <Lucide.Compass className="absolute bottom-10 right-10 w-64 h-64 text-slate-200/50 rotate-45 z-0 pointer-events-none" />
+      </section>
+
     </div>
   );
 }

@@ -205,32 +205,17 @@ function VoyagerApp() {
     }
   }, [savedDestinations, user?.id]);
 
-  // Load trips from localStorage when user changes
+  // Load trips from Supabase when user changes
   useEffect(() => {
     if (user) {
-      const storageKey = `voyager-trips_${user.id}`;
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        try {
-          setTrips(JSON.parse(stored));
-        } catch {
-          setTrips([]);
-        }
-      } else {
-        setTrips([]);
-      }
+      fetch(`http://127.0.0.1:5001/api/trips?userId=${user.id}`)
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setTrips(data))
+        .catch(() => setTrips([]));
     } else {
       setTrips([]);
     }
   }, [user?.id]);
-
-  // Save trips to localStorage whenever they change (only if user is logged in)
-  useEffect(() => {
-    if (user) {
-      const storageKey = `voyager-trips_${user.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(trips));
-    }
-  }, [trips, user?.id]);
 
   const toggleSaveDestination = useCallback((dest: Destination) => {
     if (!user) {
@@ -248,18 +233,50 @@ function VoyagerApp() {
     });
   }, [user]);
 
-  const handleTripSubmit = useCallback((trip: TripPlan) => {
-    // If editing an existing trip, remove the old one first
-    if (editingTripId) {
-      setTrips(prev => prev.filter(t => t.id !== editingTripId));
-      setEditingTripId(null);
-    }
-    setTrips(prev => [trip, ...prev]);
-    setCurrentView('trips');
-  }, [editingTripId]);
+  const handleTripSubmit = useCallback(async (trip: TripPlan) => {
+    if (!user) return;
 
-  const handleTripDelete = useCallback((id: string) => {
-    setTrips(prev => prev.filter(t => t.id !== id));
+    const tripWithUser = { ...trip, userId: user.id };
+
+    try {
+      if (editingTripId) {
+        // Update existing trip
+        const res = await fetch(`http://127.0.0.1:5001/api/trips/${editingTripId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tripWithUser),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setTrips(prev => prev.map(t => t.id === editingTripId ? updated : t));
+        }
+        setEditingTripId(null);
+      } else {
+        // Create new trip
+        const res = await fetch('http://127.0.0.1:5001/api/trips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tripWithUser),
+        });
+        if (res.ok) {
+          const saved = await res.json();
+          setTrips(prev => [saved, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save trip:', err);
+    }
+
+    setCurrentView('trips');
+  }, [editingTripId, user]);
+
+  const handleTripDelete = useCallback(async (id: string) => {
+    try {
+      await fetch(`http://127.0.0.1:5001/api/trips/${id}`, { method: 'DELETE' });
+      setTrips(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      console.error('Failed to delete trip:', err);
+    }
   }, []);
 
   // Start a new trip - clears form cache and navigates to the form
@@ -280,6 +297,7 @@ function VoyagerApp() {
 
     // Create form cache data from the trip
     const formCacheData = {
+      tripName: trip.tripName || '',
       destination: trip.destination,
       specificDestinations: trip.specificDestinations || [],
       startDate: trip.startDate,
@@ -731,7 +749,7 @@ function VoyagerApp() {
             onNavigateToSignIn={() => setCurrentView('signIn')}
           />
         ) : currentView === 'about' ? (
-          <About />
+          <About onNavigateToExplore={() => setCurrentView('explore')} />
         ) : (
           <Trips
             trips={trips}
@@ -771,11 +789,11 @@ function VoyagerApp() {
           </div>
           <span className="text-xl font-serif tracking-tight">Voyager.</span>
         </div>
-        <p className="text-slate-400 text-sm font-light">© 2025 Voyager Travel Inc. All rights reserved.</p>
+        <p className="text-slate-400 text-sm font-light">© 2026 Voyager Travel Inc. All rights reserved.</p>
         <div className="flex gap-6 text-slate-400">
-          <a href="#" className="hover:text-slate-900 transition-colors"><Lucide.Info className="w-5 h-5" /></a>
-          <a href="#" className="hover:text-slate-900 transition-colors text-sm font-medium">Privacy</a>
-          <a href="#" className="hover:text-slate-900 transition-colors text-sm font-medium">Terms</a>
+          <a className="hover:text-slate-900 transition-colors"><Lucide.Info className="w-5 h-5" /></a>
+          <a className="hover:text-slate-900 transition-colors text-sm font-medium">Privacy</a>
+          <a className="hover:text-slate-900 transition-colors text-sm font-medium">Terms</a>
         </div>
       </footer>
 

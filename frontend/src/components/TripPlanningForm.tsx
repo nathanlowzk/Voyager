@@ -25,17 +25,34 @@ export interface SpecificDestination {
   placeId?: string; // Google Maps place ID
 }
 
+export interface ItineraryActivity {
+  time: string;
+  title: string;
+  description: string;
+  location: string;
+  country: string;
+}
+
+export interface ItineraryDay {
+  day: number;
+  date: string;
+  activities: ItineraryActivity[];
+}
+
 export interface TripPlan {
   id: string;
+  tripName: string;
   destination: string;
   startDate: string;
   endDate: string;
   currency: string;
   budgetRange: string;
-  budgetAmount: number; // Raw budget amount for calculations
+  budgetAmount: number;
   companions: string;
-  numberOfPeople?: number; // Number of people traveling (for couple/family/friends)
+  numberOfPeople?: number;
   specificDestinations: SpecificDestination[];
+  itinerary?: ItineraryDay[];
+  countries?: string[];
   createdAt: string;
 }
 
@@ -349,6 +366,7 @@ function formatDisplayDate(dateStr: string) {
 const FORM_CACHE_KEY_PREFIX = 'voyager-trip-form-cache';
 
 interface FormCache {
+  tripName: string;
   destination: string;
   specificDestinations: SpecificDestination[];
   startDate: string | null;
@@ -375,6 +393,9 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
 
   // Get the cache key for the current user
   const cacheKey = getFormCacheKey(userId);
+
+  // Trip Name
+  const [tripName, setTripName] = useState('');
 
   // Field 1
   const [destination, setDestination] = useState('');
@@ -408,9 +429,13 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
   // Validation
   const [errors, setErrors] = useState<string[]>([]);
 
+  // Loading state for itinerary generation
+  const [isGenerating, setIsGenerating] = useState(false);
+
   // Load cached form data on mount or when user changes
   useEffect(() => {
     // Reset form state first when user changes
+    setTripName('');
     setDestination('');
     setSpecificDestinations([]);
     setStartDate(null);
@@ -432,6 +457,7 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
         const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
         if (cacheAge < maxAge) {
+          setTripName(data.tripName || '');
           setDestination(data.destination || '');
           setSpecificDestinations(data.specificDestinations || []);
           setStartDate(data.startDate);
@@ -455,6 +481,7 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
     if (!isInitialized) return; // Don't save until initial load is done
 
     const formData: FormCache = {
+      tripName,
       destination,
       specificDestinations,
       startDate,
@@ -473,7 +500,7 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
     } catch (err) {
       console.error('Failed to save form cache:', err);
     }
-  }, [isInitialized, cacheKey, destination, specificDestinations, startDate, endDate, calMonth, calYear, currency, budgetAmount, companions, numberOfPeople]);
+  }, [isInitialized, cacheKey, tripName, destination, specificDestinations, startDate, endDate, calMonth, calYear, currency, budgetAmount, companions, numberOfPeople]);
 
   // Clear form cache
   const clearFormCache = () => {
@@ -666,8 +693,9 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
   };
 
   // --- Submit ---
-  function handleSubmit() {
+  async function handleSubmit() {
     const newErrors: string[] = [];
+    if (!tripName.trim()) newErrors.push('tripName');
     if (!destination.trim()) newErrors.push('destination');
     if (!startDate || !endDate) newErrors.push('dates');
     if (!companions) newErrors.push('companions');
@@ -676,6 +704,7 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
 
     const trip: TripPlan = {
       id: `trip-${Date.now()}`,
+      tripName,
       destination,
       startDate: startDate!,
       endDate: endDate!,
@@ -687,6 +716,35 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
       specificDestinations,
       createdAt: new Date().toISOString(),
     };
+
+    // Generate itinerary via AI
+    setIsGenerating(true);
+    try {
+      const response = await fetch('http://localhost:5001/api/itinerary/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination,
+          startDate: startDate!,
+          endDate: endDate!,
+          currency,
+          budgetAmount,
+          companions,
+          numberOfPeople: companions !== 'solo' ? numberOfPeople : undefined,
+          specificDestinations,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        trip.itinerary = result.itinerary;
+        trip.countries = result.countries;
+      }
+    } catch (err) {
+      console.error('Failed to generate itinerary:', err);
+    } finally {
+      setIsGenerating(false);
+    }
 
     // Clear the form cache after successful submission
     clearFormCache();
@@ -714,7 +772,36 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
         </h2>
       </div>
 
+      {/* Loading overlay for itinerary generation */}
+      {isGenerating && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm mx-4">
+            <Lucide.Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+            <h3 className="text-xl font-serif text-slate-900">Crafting your itinerary...</h3>
+            <p className="text-sm text-slate-500 text-center">Our AI is planning the perfect trip for you. This may take a moment.</p>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-10">
+        {/* Trip Name */}
+        <div>
+          <label className={sectionLabel}>What would you like to call this trip?</label>
+          <div className="relative">
+            <Lucide.Pen className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              value={tripName}
+              onChange={(e) => setTripName(e.target.value)}
+              placeholder="e.g. Summer Japan Adventure"
+              className={`w-full pl-12 pr-4 py-4 rounded-full border-2 text-base outline-none transition-all ${fieldHasError('tripName') ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-emerald-500'}`}
+            />
+          </div>
+          {fieldHasError('tripName') && (
+            <p className="text-rose-500 text-xs mt-2 ml-4">Please give your trip a name</p>
+          )}
+        </div>
+
         {/* Field 1: Country/Region */}
         <div>
           <label className={sectionLabel}>Which country or region do you want to visit?</label>
@@ -1103,8 +1190,8 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
           >
             Cancel
           </button>
-          <Button onClick={handleSubmit} className="py-4 px-12 text-lg">
-            Save Trip Plan
+          <Button onClick={handleSubmit} className="py-4 px-12 text-lg" disabled={isGenerating}>
+            {isGenerating ? 'Generating...' : 'Save Trip Plan'}
           </Button>
         </div>
       </div>
