@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Lucide from 'lucide-react';
 import { Button } from './Button';
 import { Destination } from './DestinationCard';
+import { API_BASE_URL } from '../lib/api';
 
 // Extend the Window interface to include Google Maps
 declare global {
@@ -720,7 +721,7 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
     // Generate itinerary via AI
     setIsGenerating(true);
     try {
-      const response = await fetch('http://localhost:5001/api/itinerary/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/itinerary/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

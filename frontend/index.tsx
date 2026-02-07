@@ -14,6 +14,7 @@ import { Trips } from './src/components/Trips';
 import { SignIn } from './src/auth/sign_in';
 import { Registration } from './src/auth/registration';
 import { About } from './src/components/About';
+import { API_BASE_URL } from './src/lib/api';
 
 // --- Types & Interfaces ---
 
@@ -95,7 +96,7 @@ function VoyagerApp() {
 
       // Send welcome email via backend with personalized destinations
       try {
-        await fetch('http://127.0.0.1:5001/api/newsletter/welcome', {
+        await fetch(`${API_BASE_URL}/api/newsletter/welcome`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -174,41 +175,22 @@ function VoyagerApp() {
     }
   }, [currentView, editingTripId]);
 
-  // Load saved destinations from localStorage when user changes
-  // Uses user-specific key so each user has their own saved destinations
+  // Load saved destinations from Supabase when user changes
   useEffect(() => {
     if (user) {
-      // User is logged in - load their saved destinations
-      const storageKey = `savedDestinations_${user.id}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          setSavedDestinations(JSON.parse(saved));
-        } catch (err) {
-          console.error('Failed to parse saved destinations:', err);
-          setSavedDestinations([]);
-        }
-      } else {
-        setSavedDestinations([]);
-      }
+      fetch(`${API_BASE_URL}/api/saved-destinations?userId=${user.id}`)
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setSavedDestinations(data))
+        .catch(() => setSavedDestinations([]));
     } else {
-      // User is logged out - clear saved destinations
       setSavedDestinations([]);
     }
-  }, [user?.id]); // Re-run when user ID changes
-
-  // Save to localStorage whenever savedDestinations changes (only if user is logged in)
-  useEffect(() => {
-    if (user) {
-      const storageKey = `savedDestinations_${user.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(savedDestinations));
-    }
-  }, [savedDestinations, user?.id]);
+  }, [user?.id]);
 
   // Load trips from Supabase when user changes
   useEffect(() => {
     if (user) {
-      fetch(`http://127.0.0.1:5001/api/trips?userId=${user.id}`)
+      fetch(`${API_BASE_URL}/api/trips?userId=${user.id}`)
         .then(res => res.ok ? res.json() : [])
         .then(data => setTrips(data))
         .catch(() => setTrips([]));
@@ -217,21 +199,39 @@ function VoyagerApp() {
     }
   }, [user?.id]);
 
-  const toggleSaveDestination = useCallback((dest: Destination) => {
+  const toggleSaveDestination = useCallback(async (dest: Destination) => {
     if (!user) {
       showToast("Please sign in to save destinations", 'error');
       return;
     }
 
-    setSavedDestinations(prev => {
-      const isAlreadySaved = prev.some(d => d.id === dest.id);
+    const isAlreadySaved = savedDestinations.some(d => d.id === dest.id);
+
+    try {
       if (isAlreadySaved) {
-        return prev.filter(d => d.id !== dest.id);
+        const res = await fetch(`${API_BASE_URL}/api/saved-destinations`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, destinationId: dest.id }),
+        });
+        if (res.ok) {
+          setSavedDestinations(prev => prev.filter(d => d.id !== dest.id));
+        }
       } else {
-        return [...prev, dest];
+        const res = await fetch(`${API_BASE_URL}/api/saved-destinations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, destinationId: dest.id }),
+        });
+        if (res.ok) {
+          setSavedDestinations(prev => [...prev, dest]);
+        }
       }
-    });
-  }, [user]);
+    } catch (err) {
+      console.error('Failed to toggle saved destination:', err);
+      showToast("Failed to update saved destination", 'error');
+    }
+  }, [user, savedDestinations]);
 
   const handleTripSubmit = useCallback(async (trip: TripPlan) => {
     if (!user) return;
@@ -241,7 +241,7 @@ function VoyagerApp() {
     try {
       if (editingTripId) {
         // Update existing trip
-        const res = await fetch(`http://127.0.0.1:5001/api/trips/${editingTripId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/trips/${editingTripId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(tripWithUser),
@@ -253,7 +253,7 @@ function VoyagerApp() {
         setEditingTripId(null);
       } else {
         // Create new trip
-        const res = await fetch('http://127.0.0.1:5001/api/trips', {
+        const res = await fetch(`${API_BASE_URL}/api/trips`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(tripWithUser),
@@ -272,7 +272,7 @@ function VoyagerApp() {
 
   const handleTripDelete = useCallback(async (id: string) => {
     try {
-      await fetch(`http://127.0.0.1:5001/api/trips/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/api/trips/${id}`, { method: 'DELETE' });
       setTrips(prev => prev.filter(t => t.id !== id));
     } catch (err) {
       console.error('Failed to delete trip:', err);
@@ -349,7 +349,7 @@ function VoyagerApp() {
   const loadRandomDestinations = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:5001/api/destinations/random');
+      const response = await fetch(`${API_BASE_URL}/api/destinations/random`);
 
       if (!response.ok) {
         throw new Error('Network response was not ok');
@@ -377,7 +377,7 @@ function VoyagerApp() {
     try {
       // Send tags as query parameter (comma-separated)
       const tagsParam = encodeURIComponent(tags.join(','));
-      const response = await fetch(`http://127.0.0.1:5001/api/destinations/personalized?tags=${tagsParam}`);
+      const response = await fetch(`${API_BASE_URL}/api/destinations/personalized?tags=${tagsParam}`);
 
       if (!response.ok) {
         throw new Error('Network response was not ok');
