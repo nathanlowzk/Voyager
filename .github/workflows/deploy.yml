@@ -50,9 +50,9 @@ jobs:
         run: |
           docker build --platform linux/amd64 \
             --build-arg VITE_API_URL=backend-api.wittygrass-066c3778.eastasia.azurecontainerapps.io \
-            --build-arg VITE_SUPABASE_URL=https://cborhugaaafqrgyfhgak.supabase.co
-            --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNib3JodWdhYWFmcXJneWZoZ2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMjU3NzYsImV4cCI6MjA4NTcwMTc3Nn0.cTl7VWQVDC6XNqOUANM9UrmjeGlmD3piVCQzSXxf3sI }} \
-            --build-arg VITE_GOOGLE_MAPS_API_KEY=${{ secrets.AIzaSyD7ltVf3DIbGGb9-0M3nDjEqFQLxCpLBOk }} \
+            --build-arg VITE_SUPABASE_URL=https://cborhugaaafqrgyfhgak.supabase.co \
+            --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
+            --build-arg VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }} \
             -t nathanvoyagerpersonal.azurecr.io/frontend:${{ github.sha }} ./frontend
           docker push nathanvoyagerpersonal.azurecr.io/frontend:${{ github.sha }}
 
