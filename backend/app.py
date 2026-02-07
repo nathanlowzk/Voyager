@@ -11,7 +11,7 @@ from routes.saved_destinations import saved_destinations_bp
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Register route blueprints
 app.register_blueprint(destinations_bp)

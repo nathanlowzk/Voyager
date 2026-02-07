@@ -39,7 +39,6 @@ jobs:
       - name: Deploy Backend
         uses: azure/container-apps-deploy-action@v1
         with:
-          appSourcePath: ${{ github.workspace }}/backend
           acrName: nathanvoyagerpersonal
           containerAppName: backend-api
           resourceGroup: Voyager-rg
@@ -59,7 +58,6 @@ jobs:
       - name: Deploy Frontend
         uses: azure/container-apps-deploy-action@v1
         with:
-          appSourcePath: ${{ github.workspace }}/frontend
           acrName: nathanvoyagerpersonal
           containerAppName: frontend-app
           resourceGroup: Voyager-rg
