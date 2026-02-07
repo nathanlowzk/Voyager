@@ -51,7 +51,7 @@ def add_destination(dest):
     except Exception as e:
         print(f"❌ Error saving to Supabase: {e}")
         return None
-    
+
 def get_random_batch(limit=4):
     """
     Fetches all destinations and returns 4 random ones.
