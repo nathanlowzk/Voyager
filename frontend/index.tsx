@@ -289,7 +289,6 @@ function VoyagerApp() {
       budgetAmount: trip.budgetAmount,
       companions: trip.companions,
       numberOfPeople: trip.numberOfPeople || 2,
-      selectedActivities: trip.activities,
       savedAt: Date.now(),
     };
 
@@ -583,11 +582,6 @@ function VoyagerApp() {
             className={`text-sm font-medium transition-colors flex items-center gap-1 ${currentView === 'trips' ? 'text-emerald-600' : 'hover:text-emerald-600'}`}
           >
             Trips
-            {user && trips.length > 0 && (
-              <span className="bg-emerald-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {trips.length}
-              </span>
-            )}
           </button>
           <a href="#" className="text-sm font-medium hover:text-emerald-600 transition-colors">About</a>
         </div>
@@ -706,6 +700,7 @@ function VoyagerApp() {
         ) : currentView === 'tripForm' ? (
           <TripPlanningForm
             onSubmit={handleTripSubmit}
+            onCancel={() => setCurrentView('trips')}
             savedDestinations={savedDestinations}
             googleMapsApiKey={(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}
             userId={user?.id}

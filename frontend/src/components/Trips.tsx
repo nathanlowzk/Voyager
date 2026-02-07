@@ -18,17 +18,6 @@ const COMPANION_LABELS: Record<string, string> = {
   solo: 'Solo', couple: 'Couple', family: 'Family', friends: 'Friends',
 };
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  'beaches': 'Beaches',
-  'city-sightseeing': 'City Sightseeing',
-  'outdoor-activities': 'Outdoor Activities',
-  'festivals-events': 'Festivals / Events',
-  'food-exploration': 'Food Exploration',
-  'nightlife': 'Nightlife',
-  'shopping': 'Shopping',
-  'spa-wellness': 'Spa & Wellness',
-};
-
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -141,24 +130,6 @@ function TripDetailModal({
                   {symbol}{formatAmount(trip.budgetAmount)} per person
                 </p>
               )}
-            </div>
-          </div>
-
-          {/* Activities */}
-          <div>
-            <div className="flex items-center gap-2 text-emerald-600 font-bold tracking-widest text-[10px] uppercase mb-3">
-              <Lucide.Sparkles className="w-4 h-4" />
-              Activities
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {trip.activities.map(a => (
-                <span
-                  key={a}
-                  className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-full"
-                >
-                  {ACTIVITY_LABELS[a] || a}
-                </span>
-              ))}
             </div>
           </div>
 
@@ -308,24 +279,6 @@ export function Trips({ trips, onDeleteTrip, onPlanTrip, onEditTrip }: TripsProp
                   <div className="flex items-center gap-3 text-slate-600">
                     <Lucide.Users className="w-4 h-4 text-slate-400 shrink-0" />
                     <span>{getCompanionDisplay(trip.companions, trip.numberOfPeople)}</span>
-                  </div>
-                  <div className="flex items-start gap-3 text-slate-600">
-                    <Lucide.Sparkles className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                    <div className="flex flex-wrap gap-1.5">
-                      {trip.activities.slice(0, 3).map(a => (
-                        <span
-                          key={a}
-                          className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded-full"
-                        >
-                          {ACTIVITY_LABELS[a] || a}
-                        </span>
-                      ))}
-                      {trip.activities.length > 3 && (
-                        <span className="px-2.5 py-1 bg-slate-100 text-slate-500 text-[11px] font-medium rounded-full">
-                          +{trip.activities.length - 3} more
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>

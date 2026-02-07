@@ -35,13 +35,13 @@ export interface TripPlan {
   budgetAmount: number; // Raw budget amount for calculations
   companions: string;
   numberOfPeople?: number; // Number of people traveling (for couple/family/friends)
-  activities: string[];
   specificDestinations: SpecificDestination[];
   createdAt: string;
 }
 
 interface TripPlanningFormProps {
   onSubmit: (trip: TripPlan) => void;
+  onCancel: () => void;
   savedDestinations: Destination[];
   googleMapsApiKey: string;
   userId?: string; // User ID for user-specific form caching
@@ -285,19 +285,6 @@ const COMPANIONS = [
   { value: 'friends', label: 'Friends', icon: Lucide.UsersRound },
 ];
 
-// --- Activity options ---
-
-const ACTIVITIES = [
-  { value: 'beaches', label: 'Beaches', icon: Lucide.Waves },
-  { value: 'city-sightseeing', label: 'City Sightseeing', icon: Lucide.Building2 },
-  { value: 'outdoor-activities', label: 'Outdoor Activities', icon: Lucide.Mountain },
-  { value: 'festivals-events', label: 'Festivals / Events', icon: Lucide.PartyPopper },
-  { value: 'food-exploration', label: 'Food Exploration', icon: Lucide.UtensilsCrossed },
-  { value: 'nightlife', label: 'Nightlife', icon: Lucide.Moon },
-  { value: 'shopping', label: 'Shopping', icon: Lucide.ShoppingBag },
-  { value: 'spa-wellness', label: 'Spa & Wellness', icon: Lucide.Flower2 },
-];
-
 // --- Country code mapping for Google Maps API ---
 const COUNTRY_CODES: Record<string, string> = {
   "Afghanistan": "af", "Albania": "al", "Algeria": "dz", "Andorra": "ad", "Angola": "ao",
@@ -372,7 +359,6 @@ interface FormCache {
   budgetAmount: number;
   companions: string;
   numberOfPeople: number;
-  selectedActivities: string[];
   savedAt: number;
 }
 
@@ -383,7 +369,7 @@ function getFormCacheKey(userId?: string): string {
 
 // --- Component ---
 
-export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey, userId }: TripPlanningFormProps) {
+export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, googleMapsApiKey, userId }: TripPlanningFormProps) {
   // Track if initial load from cache is done
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -419,9 +405,6 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
   const [companions, setCompanions] = useState('');
   const [numberOfPeople, setNumberOfPeople] = useState(2);
 
-  // Field 5
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-
   // Validation
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -438,7 +421,6 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
     setBudgetAmount(5000);
     setCompanions('');
     setNumberOfPeople(2);
-    setSelectedActivities([]);
     setIsInitialized(false);
 
     try {
@@ -460,7 +442,6 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
           setBudgetAmount(data.budgetAmount ?? 5000);
           setCompanions(data.companions || '');
           setNumberOfPeople(data.numberOfPeople ?? 2);
-          setSelectedActivities(data.selectedActivities || []);
         }
       }
     } catch (err) {
@@ -484,7 +465,6 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
       budgetAmount,
       companions,
       numberOfPeople,
-      selectedActivities,
       savedAt: Date.now(),
     };
 
@@ -493,7 +473,7 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
     } catch (err) {
       console.error('Failed to save form cache:', err);
     }
-  }, [isInitialized, cacheKey, destination, specificDestinations, startDate, endDate, calMonth, calYear, currency, budgetAmount, companions, numberOfPeople, selectedActivities]);
+  }, [isInitialized, cacheKey, destination, specificDestinations, startDate, endDate, calMonth, calYear, currency, budgetAmount, companions, numberOfPeople]);
 
   // Clear form cache
   const clearFormCache = () => {
@@ -685,20 +665,12 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
     return `${currencyObj.symbol}${formatAmount(budgetAmount)}`;
   };
 
-  // --- Field 5: Activities ---
-  function toggleActivity(value: string) {
-    setSelectedActivities(prev =>
-      prev.includes(value) ? prev.filter(a => a !== value) : [...prev, value]
-    );
-  }
-
   // --- Submit ---
   function handleSubmit() {
     const newErrors: string[] = [];
     if (!destination.trim()) newErrors.push('destination');
     if (!startDate || !endDate) newErrors.push('dates');
     if (!companions) newErrors.push('companions');
-    if (selectedActivities.length === 0) newErrors.push('activities');
     setErrors(newErrors);
     if (newErrors.length > 0) return;
 
@@ -712,7 +684,6 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
       budgetAmount,
       companions,
       numberOfPeople: companions !== 'solo' ? numberOfPeople : undefined,
-      activities: selectedActivities,
       specificDestinations,
       createdAt: new Date().toISOString(),
     };
@@ -1124,32 +1095,14 @@ export function TripPlanningForm({ onSubmit, savedDestinations, googleMapsApiKey
           </div>
         </div>
 
-        {/* Field 5: Activities */}
-        <div>
-          <label className={sectionLabel}>Which activities are you interested in?</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {ACTIVITIES.map(a => {
-              const Icon = a.icon;
-              const isSelected = selectedActivities.includes(a.value);
-              return (
-                <button
-                  key={a.value}
-                  onClick={() => toggleActivity(a.value)}
-                  className={`${pillBase} ${isSelected ? pillActive : pillInactive} flex-col items-center justify-center !rounded-2xl !py-5 text-center`}
-                >
-                  <Icon className="w-5 h-5 mb-1" />
-                  <span className="text-xs leading-tight">{a.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          {fieldHasError('activities') && (
-            <p className="text-rose-500 text-xs mt-2 ml-4">Please select at least one activity</p>
-          )}
-        </div>
-
-        {/* Submit */}
-        <div className="flex justify-center pt-4">
+        {/* Actions */}
+        <div className="flex justify-center gap-4 pt-4">
+          <button
+            onClick={() => { clearFormCache(); onCancel(); }}
+            className="py-4 px-12 text-lg rounded-full border-2 border-slate-200 text-slate-600 font-medium hover:border-slate-300 transition-all"
+          >
+            Cancel
+          </button>
           <Button onClick={handleSubmit} className="py-4 px-12 text-lg">
             Save Trip Plan
           </Button>
