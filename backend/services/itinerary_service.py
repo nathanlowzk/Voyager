@@ -42,7 +42,7 @@ def generate_itinerary(trip_data: dict) -> dict:
                 "- Allocate FULL days (not just a few hours) for these destinations proportional to how much "
                 "time that activity realistically requires. For example, a ski resort deserves 2-3 full days of skiing.\n"
                 "- Schedule supplementary destinations (restaurants, nearby attractions) AROUND these core destinations, not instead of them.\n"
-                "- At least 60% of the trip should revolve around the traveler's chosen destinations."
+                "- At least 70% of the trip should revolve around the traveler's chosen destinations."
             )
 
     # Build companion context
@@ -60,7 +60,9 @@ def generate_itinerary(trip_data: dict) -> dict:
         f"traveling to {destination} from {start_date} to {end_date}. "
         f"The budget is {currency} {budget_amount} per person. "
         f"Plan 3-5 activities per day with realistic timings.{places_hint}\n\n"
+        "Take the country's culture into consideration"
         "Include a mix of sightseeing, food, culture, and leisure. "
+        "Take the proximity of locations from one another into consideration, planning an efficient route"
         "Each activity must include the specific location name and the country it's in.\n\n"
         "Before finalizing, review the itinerary and verify that:\n"
         "1. The traveler's chosen destinations get adequate time (full days, not brief visits).\n"
