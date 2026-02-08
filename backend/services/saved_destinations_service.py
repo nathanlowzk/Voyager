@@ -26,7 +26,7 @@ def get_saved_destinations(user_id: str) -> list:
         return []
 
 
-def save_destination(user_id: str, destination_id: str) -> dict:
+def save_destination(user_id: str, destination_id: str) -> tuple:
     """Insert a saved destination row."""
     try:
         response = (
@@ -34,10 +34,10 @@ def save_destination(user_id: str, destination_id: str) -> dict:
             .insert({"user_id": user_id, "destination_id": destination_id})
             .execute()
         )
-        return response.data[0] if response.data else None
+        return (response.data[0] if response.data else None, None)
     except Exception as e:
-        print(f"Error saving destination: {e}")
-        return None
+        print(f"Error saving destination: {e}", flush=True)
+        return (None, str(e))
 
 
 def unsave_destination(user_id: str, destination_id: str) -> bool:

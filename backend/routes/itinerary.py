@@ -35,7 +35,7 @@ def generate():
 
     result = generate_itinerary(data)
 
-    if result:
+    if result and "error" not in result:
         return jsonify(result), 200
     else:
-        return jsonify({"error": "Failed to generate itinerary"}), 500
+        return jsonify({"error": f"Failed to generate itinerary: {result.get('error', 'unknown')}"}), 500

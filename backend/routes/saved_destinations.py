@@ -43,11 +43,11 @@ def save():
     if not data or not data.get('userId') or not data.get('destinationId'):
         return jsonify({"error": "userId and destinationId are required"}), 400
 
-    result = save_destination(data['userId'], data['destinationId'])
+    result, error = save_destination(data['userId'], data['destinationId'])
     if result:
         return jsonify({"message": "Destination saved"}), 201
     else:
-        return jsonify({"error": "Failed to save destination"}), 500
+        return jsonify({"error": f"Failed to save destination: {error}"}), 500
 
 
 @saved_destinations_bp.route('/api/saved-destinations', methods=['DELETE'])

@@ -107,5 +107,5 @@ def generate_itinerary(trip_data: dict) -> dict:
         }
 
     except Exception as e:
-        print(f"❌ Itinerary generation failed: {e}")
-        return None
+        print(f"❌ Itinerary generation failed: {e}", flush=True)
+        return {"error": str(e)}
