@@ -47,7 +47,7 @@ jobs:
       - name: Build and Push Frontend
         run: |
           docker build --platform linux/amd64 \
-            --build-arg VITE_API_URL=https://backend-api.mangoisland-885cd65d.eastus.azurecontainerapps.io \
+            --build-arg VITE_API_URL=https://api.voyager-travel.org \
             --build-arg VITE_SUPABASE_URL=https://cborhugaaafqrgyfhgak.supabase.co \
             --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
             --build-arg VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }} \
