@@ -34,7 +34,16 @@ def generate_itinerary(trip_data: dict) -> dict:
     if specific_destinations:
         place_names = [p.get('name', '') for p in specific_destinations if p.get('name')]
         if place_names:
-            places_hint = f" The traveler specifically wants to visit: {', '.join(place_names)}. Incorporate these into the itinerary."
+            places_hint = (
+                f"\n\nIMPORTANT - The traveler specifically chose these destinations: {', '.join(place_names)}. "
+                "These are the PRIMARY reason for the trip. For each one:\n"
+                "- Deduce what activity the destination is known for (e.g. a ski resort means skiing/snowboarding, "
+                "a beach means beach activities, a theme park means rides, a national park means hiking).\n"
+                "- Allocate FULL days (not just a few hours) for these destinations proportional to how much "
+                "time that activity realistically requires. For example, a ski resort deserves 2-3 full days of skiing.\n"
+                "- Schedule supplementary destinations (restaurants, nearby attractions) AROUND these core destinations, not instead of them.\n"
+                "- At least 60% of the trip should revolve around the traveler's chosen destinations."
+            )
 
     # Build companion context
     companion_text = "a solo traveler"
@@ -46,12 +55,17 @@ def generate_itinerary(trip_data: dict) -> dict:
         companion_text = f"a group of {number_of_people} friends"
 
     prompt_text = (
+        "You are an expert travel planner who creates realistic, well-paced itineraries. "
         f"Create a detailed day-by-day travel itinerary for {companion_text} "
         f"traveling to {destination} from {start_date} to {end_date}. "
         f"The budget is {currency} {budget_amount} per person. "
-        f"Plan 3-5 activities per day with realistic timings.{places_hint} "
+        f"Plan 3-5 activities per day with realistic timings.{places_hint}\n\n"
         "Include a mix of sightseeing, food, culture, and leisure. "
-        "Each activity must include the specific location name and the country it's in. "
+        "Each activity must include the specific location name and the country it's in.\n\n"
+        "Before finalizing, review the itinerary and verify that:\n"
+        "1. The traveler's chosen destinations get adequate time (full days, not brief visits).\n"
+        "2. The pacing is realistic with no rushed transitions.\n"
+        "3. Activities match what each destination is actually known for.\n\n"
         "Return a JSON array of days, each containing a day number, date, and list of activities."
     )
 
