@@ -59,7 +59,7 @@ def send_welcome_email(to_email: str, user_name: str, destinations: list = None)
             )
 
         params = {
-            "from": "Voyager <onboarding@resend.dev>",  # Update with your verified domain
+            "from": "Voyager <noreply@voyager-travel.org>",  # Update with your verified domain
             "to": [to_email],
             "subject": "Welcome to Voyager's Weekly Destinations!",
             "html": f"""
