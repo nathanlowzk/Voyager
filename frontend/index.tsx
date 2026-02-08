@@ -356,14 +356,7 @@ function VoyagerApp() {
       }
 
       const data = await response.json();
-
-      // Add unique IDs to the data coming from Python
-      const formattedData = data.map((d: any, i: number) => ({
-        ...d,
-        id: `dest-${i}-${Date.now()}`
-      }));
-
-      setDestinations(formattedData);
+      setDestinations(data);
     } catch (err) {
       console.error("Failed to fetch destinations:", err);
     } finally {
@@ -384,14 +377,7 @@ function VoyagerApp() {
       }
 
       const data = await response.json();
-
-      // Add unique IDs to the data coming from Python
-      const formattedData = data.map((d: any, i: number) => ({
-        ...d,
-        id: `dest-${i}-${Date.now()}`
-      }));
-
-      setDestinations(formattedData);
+      setDestinations(data);
     } catch (err) {
       console.error("Failed to fetch personalized destinations:", err);
       showToast("Failed to load personalized destinations. Please try again.", 'error');
