@@ -40,6 +40,16 @@ export interface ItineraryDay {
   activities: ItineraryActivity[];
 }
 
+export interface ClarifyingQuestion {
+  id: string;
+  text: string;
+}
+
+export interface ClarifyingAnswer {
+  question: string;
+  answer: string;
+}
+
 export interface TripPlan {
   id: string;
   tripName: string;
@@ -433,6 +443,13 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
   // Loading state for itinerary generation
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Clarifying questions state
+  const [clarifyingQuestions, setClarifyingQuestions] = useState<ClarifyingQuestion[]>([]);
+  const [clarifyingAnswers, setClarifyingAnswers] = useState<ClarifyingAnswer[]>([]);
+  const [showQuestionsModal, setShowQuestionsModal] = useState(false);
+  const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
   // Load cached form data on mount or when user changes
   useEffect(() => {
     // Reset form state first when user changes
@@ -696,16 +713,23 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
     return `${currencyObj.symbol}${formatAmount(budgetAmount)}`;
   };
 
-  // --- Submit ---
-  async function handleSubmit() {
-    const newErrors: string[] = [];
-    if (!tripName.trim()) newErrors.push('tripName');
-    if (!destination.trim()) newErrors.push('destination');
-    if (!startDate || !endDate) newErrors.push('dates');
-    if (!companions) newErrors.push('companions');
-    setErrors(newErrors);
-    if (newErrors.length > 0) return;
+  // --- Build trip request body ---
+  function buildTripRequestBody(answers?: ClarifyingAnswer[]) {
+    return {
+      destination,
+      startDate: startDate!,
+      endDate: endDate!,
+      currency,
+      budgetAmount,
+      companions,
+      numberOfPeople: companions !== 'solo' ? numberOfPeople : undefined,
+      specificDestinations,
+      ...(answers && answers.length > 0 ? { clarifyingAnswers: answers } : {}),
+    };
+  }
 
+  // --- Generate itinerary with optional clarifying answers ---
+  async function generateItinerary(answers?: ClarifyingAnswer[]) {
     const trip: TripPlan = {
       id: `trip-${Date.now()}`,
       tripName,
@@ -721,22 +745,12 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
       createdAt: new Date().toISOString(),
     };
 
-    // Generate itinerary via AI
     setIsGenerating(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/itinerary/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          destination,
-          startDate: startDate!,
-          endDate: endDate!,
-          currency,
-          budgetAmount,
-          companions,
-          numberOfPeople: companions !== 'solo' ? numberOfPeople : undefined,
-          specificDestinations,
-        }),
+        body: JSON.stringify(buildTripRequestBody(answers)),
       });
 
       if (response.ok) {
@@ -750,10 +764,75 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
       setIsGenerating(false);
     }
 
-    // Clear the form cache after successful submission
     clearFormCache();
-
     onSubmit(trip);
+  }
+
+  // --- Handle answering a clarifying question ---
+  function handleQuestionAnswer(answer: 'Yes' | 'No' | null) {
+    const currentQ = clarifyingQuestions[currentQuestionIndex];
+    const updatedAnswers = [...clarifyingAnswers];
+
+    if (answer !== null) {
+      updatedAnswers.push({ question: currentQ.text, answer });
+    }
+
+    setClarifyingAnswers(updatedAnswers);
+
+    const nextIndex = currentQuestionIndex + 1;
+    if (nextIndex < clarifyingQuestions.length) {
+      setCurrentQuestionIndex(nextIndex);
+    } else {
+      // All questions answered — generate itinerary
+      setShowQuestionsModal(false);
+      setClarifyingQuestions([]);
+      setCurrentQuestionIndex(0);
+      generateItinerary(updatedAnswers);
+    }
+  }
+
+  // --- Submit ---
+  async function handleSubmit() {
+    const newErrors: string[] = [];
+    if (!tripName.trim()) newErrors.push('tripName');
+    if (!destination.trim()) newErrors.push('destination');
+    if (!startDate || !endDate) newErrors.push('dates');
+    if (!companions) newErrors.push('companions');
+    setErrors(newErrors);
+    if (newErrors.length > 0) return;
+
+    // Fetch clarifying questions first
+    setIsFetchingQuestions(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/itinerary/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildTripRequestBody()),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const questions: ClarifyingQuestion[] = result.questions || [];
+
+        if (questions.length > 0) {
+          // Show questions modal
+          setClarifyingQuestions(questions);
+          setClarifyingAnswers([]);
+          setCurrentQuestionIndex(0);
+          setIsFetchingQuestions(false);
+          setShowQuestionsModal(true);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch clarifying questions:', err);
+      // Graceful fallback — proceed to generation
+    }
+
+    setIsFetchingQuestions(false);
+
+    // No questions (or fetch failed) — go straight to generation
+    generateItinerary();
   }
 
   const fieldHasError = (field: string) => errors.includes(field);
@@ -775,6 +854,72 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
           Let's plan your next adventure
         </h2>
       </div>
+
+      {/* Loading overlay for fetching questions */}
+      {isFetchingQuestions && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm mx-4">
+            <Lucide.Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+            <h3 className="text-xl font-serif text-slate-900">Analyzing your trip...</h3>
+            <p className="text-sm text-slate-500 text-center">We're checking if we need a few more details from you.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Clarifying questions modal */}
+      {showQuestionsModal && clarifyingQuestions.length > 0 && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-6 max-w-md mx-4 w-full">
+            {/* Progress indicator */}
+            <div className="flex items-center gap-2">
+              {clarifyingQuestions.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i < currentQuestionIndex
+                      ? 'w-8 bg-emerald-500'
+                      : i === currentQuestionIndex
+                        ? 'w-8 bg-emerald-400'
+                        : 'w-8 bg-slate-200'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Question */}
+            <div className="text-center">
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-3">
+                Quick question {currentQuestionIndex + 1} of {clarifyingQuestions.length}
+              </p>
+              <h3 className="text-xl font-serif text-slate-900">
+                {clarifyingQuestions[currentQuestionIndex].text}
+              </h3>
+            </div>
+
+            {/* Answer buttons */}
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => handleQuestionAnswer('Yes')}
+                className="flex-1 py-3 px-6 rounded-full border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-medium text-sm hover:bg-emerald-100 transition-all"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => handleQuestionAnswer('No')}
+                className="flex-1 py-3 px-6 rounded-full border-2 border-slate-300 bg-slate-50 text-slate-700 font-medium text-sm hover:bg-slate-100 transition-all"
+              >
+                No
+              </button>
+              <button
+                onClick={() => handleQuestionAnswer(null)}
+                className="py-3 px-6 rounded-full text-slate-400 font-medium text-sm hover:text-slate-600 transition-all"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading overlay for itinerary generation */}
       {isGenerating && (
@@ -1110,10 +1255,11 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
         {/* Field 4: Budget */}
         <div>
           <label className={sectionLabel}>What is your budget?</label>
-          <div className="flex flex-col gap-6">
+          <div className="rounded-3xl border-2 border-slate-200 p-6">
             {/* Currency toggle */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mb-8">
               <Lucide.Wallet className="w-5 h-5 text-slate-400" />
+              <span className="text-sm text-slate-600 font-medium">Currency</span>
               <div className="flex rounded-full border-2 border-slate-200 overflow-hidden">
                 {CURRENCIES.map(c => (
                   <button
@@ -1132,8 +1278,8 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
             </div>
 
             {/* Budget display */}
-            <div className="text-center">
-              <div className="text-4xl font-serif text-slate-900 mb-2">
+            <div className="text-center py-4">
+              <div className="text-5xl font-serif text-slate-900 mb-2">
                 {budgetAmount >= BUDGET_MAX ? (
                   <>{currencyObj.symbol}{formatAmount(BUDGET_MAX)}<span className="text-emerald-500">++</span></>
                 ) : (
@@ -1146,7 +1292,7 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
             </div>
 
             {/* Slider */}
-            <div className="px-2">
+            <div className="px-2 mt-6">
               <input
                 type="range"
                 min={0}
@@ -1194,8 +1340,8 @@ export function TripPlanningForm({ onSubmit, onCancel, savedDestinations, google
           >
             Cancel
           </button>
-          <Button onClick={handleSubmit} className="py-4 px-12 text-lg" disabled={isGenerating}>
-            {isGenerating ? 'Generating...' : 'Save Trip Plan'}
+          <Button onClick={handleSubmit} className="py-4 px-12 text-lg" disabled={isGenerating || isFetchingQuestions}>
+            {isFetchingQuestions ? 'Analyzing...' : isGenerating ? 'Generating...' : 'Save Trip Plan'}
           </Button>
         </div>
       </div>

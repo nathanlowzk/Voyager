@@ -1,7 +1,26 @@
 from flask import Blueprint, jsonify, request
-from services.itinerary_service import generate_itinerary
+from services.itinerary_service import generate_itinerary, generate_clarifying_questions
 
 itinerary_bp = Blueprint('itinerary', __name__)
+
+
+@itinerary_bp.route('/api/itinerary/questions', methods=['POST'])
+def get_questions():
+    """
+    Generate 0-3 clarifying yes/no questions before itinerary generation.
+
+    Request Body: Same as /generate endpoint.
+
+    Returns:
+        JSON with 'questions' (array of {id, text} objects)
+    """
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"questions": []}), 200
+
+    questions = generate_clarifying_questions(data)
+    return jsonify({"questions": questions}), 200
 
 
 @itinerary_bp.route('/api/itinerary/generate', methods=['POST'])

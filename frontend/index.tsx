@@ -785,6 +785,40 @@ function VoyagerApp() {
                 </div>
               )}
             </section>
+
+            {/* Trip Planning CTA */}
+            <section className="max-w-7xl mx-auto px-6 pb-12 md:pb-20">
+              <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white">
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-400 rounded-full blur-[100px] -mr-32 -mt-32" />
+                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400 rounded-full blur-[80px] -ml-24 -mb-24" />
+                </div>
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12 p-8 md:p-14">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-emerald-400 font-bold tracking-widest text-[10px] uppercase mb-4">
+                      <Lucide.Sparkles className="w-4 h-4" />
+                      AI-Powered Trip Planner
+                    </div>
+                    <h2 className="text-3xl md:text-4xl font-serif leading-tight mb-4">
+                      Turn your dream trip into a real itinerary
+                    </h2>
+                    <p className="text-slate-300 font-light text-lg leading-relaxed max-w-lg">
+                      Tell us where you want to go, and our AI will craft a personalized day-by-day itinerary with activities, timings, and local recommendations.
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    <button
+                      onClick={() => requireAuth(handleNewTrip, "Please sign in to plan a trip")}
+                      className="group flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-white font-medium py-4 px-8 rounded-full text-lg transition-all"
+                    >
+                      <Lucide.Map className="w-5 h-5" />
+                      Plan a Trip
+                      <Lucide.ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
           </>
         ) : currentView === 'passport' ? (
           <Passport
