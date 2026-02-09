@@ -7,6 +7,10 @@ on:
       - deployment-setup-nathan  # <--- Triggers on your new branch!
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
