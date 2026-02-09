@@ -128,7 +128,7 @@ export function About({ onNavigateToExplore }: AboutProps) {
                 <Lucide.Search className="w-6 h-6" />
               </div>
               <h3 className="text-2xl font-serif mb-4 text-slate-900">Discover</h3>
-              <p className="text-slate-500 font-light leading-relaxed">Swipe through thousands of curated hidden gems. No tourist traps allowed.</p>
+              <p className="text-slate-500 font-light leading-relaxed">Swipe through thousands of curated AI-generated gems.</p>
             </div>
 
             {/* Step 2 */}
@@ -145,10 +145,10 @@ export function About({ onNavigateToExplore }: AboutProps) {
             <div className="p-12 relative group hover:bg-blue-50/30 transition-colors duration-500">
               <div className="absolute top-6 right-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest border border-slate-200 px-2 py-1 rounded">Step 03</div>
               <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-8 text-blue-600 group-hover:scale-110 transition-transform duration-500">
-                <Lucide.Plane className="w-6 h-6" />
+                <Lucide.Map className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-serif mb-4 text-slate-900">Depart</h3>
-              <p className="text-slate-500 font-light leading-relaxed">Turn that list into a plan. Book the flight. Pack the bag. Go.</p>
+              <h3 className="text-2xl font-serif mb-4 text-slate-900">Plan</h3>
+              <p className="text-slate-500 font-light leading-relaxed">Turn your saved destinations into a trip. Our AI builds a personalized day-by-day itinerary for you.</p>
             </div>
           </div>
         </div>

@@ -736,6 +736,10 @@ function VoyagerApp() {
                   <p className="text-slate-500 mt-4 font-light">
                     Click on any destination to explore more
                   </p>
+                  <p className="text-slate-400 mt-2 text-xs flex items-center gap-1.5">
+                    <Lucide.ImageIcon className="w-3 h-3" />
+                    All destination images are AI-generated
+                  </p>
                 </div>
 
                 <div className="flex flex-col items-start md:items-end gap-4">
